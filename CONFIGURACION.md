@@ -56,7 +56,7 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 
 ## Meta Pixel y consentimiento
 
-La landing tiene una integración opcional y segura. Si no existe `VITE_META_PIXEL_ID`, el sitio funciona igual y no carga Meta Pixel.
+La landing tiene una integración segura con el Pixel `1441414194212741`. El ID también puede sobrescribirse en Vercel con `VITE_META_PIXEL_ID`; si se elimina el ID, el sitio sigue funcionando sin medición.
 
 Cuando tengas el ID real del Pixel:
 

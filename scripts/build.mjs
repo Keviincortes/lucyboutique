@@ -6,7 +6,7 @@ await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
 
 let html = await readFile(`${root}/index.html`, 'utf8');
-const pixelId = process.env.VITE_META_PIXEL_ID || '';
+const pixelId = process.env.VITE_META_PIXEL_ID || '1441414194212741';
 html = html.replaceAll('__VITE_META_PIXEL_ID__', pixelId);
 await writeFile(`${dist}/index.html`, html, 'utf8');
 await cp(`${root}/assets`, `${dist}/assets`, { recursive: true });

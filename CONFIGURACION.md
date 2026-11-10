@@ -5,7 +5,7 @@ La landing calcula el pedido, lo registra en Google Sheets y abre WhatsApp con e
 - Bogotá: $10.000.
 - Cualquier otra ciudad escrita por la clienta: aproximado $22.900.
 - Pago anticipado: producto + envío; incluye regalo.
-- Apartado: paga solo envío; el producto se paga al recibir; no incluye regalo.
+- Pago contra entrega: paga solo el envío primero; el producto se paga al recibir; no incluye regalo.
 - La clienta solicita por WhatsApp los datos para pagar y luego envía el comprobante en el mismo chat.
 
 Para registrar pedidos automáticamente, el sitio necesita el Web App gratuito de Google Apps Script. No es seguro ni correcto poner secretos de Google o WhatsApp en `index.html`.
@@ -49,7 +49,44 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 ## Antes de publicar anuncios
 
 1. Haz una prueba de pago anticipado en Bogotá.
-2. Haz una prueba de apartado para otra ciudad.
+2. Haz una prueba de pago contra entrega para otra ciudad.
 3. Verifica la fila en Google Sheets y el correo opcional.
 4. Comprueba que el mensaje de WhatsApp se abre con los datos correctos.
 5. Envía un comprobante de prueba y cambia manualmente el estado en Sheets.
+
+## Meta Pixel y consentimiento
+
+La landing tiene una integración opcional y segura. Si no existe `VITE_META_PIXEL_ID`, el sitio funciona igual y no carga Meta Pixel.
+
+Cuando tengas el ID real del Pixel:
+
+1. En Vercel abre el proyecto y entra a `Settings > Environment Variables`.
+2. Crea `VITE_META_PIXEL_ID` con el ID numérico del Pixel. No pongas tokens de Conversions API en el navegador.
+3. Actívala para `Production` y, si vas a probar previews, también para `Preview`.
+4. Ejecuta un nuevo redeploy desde `Deployments > Redeploy` o publica un nuevo commit.
+5. Abre la web, acepta el aviso de medición y comprueba en Meta Events Manager > Test events.
+
+Eventos preparados:
+
+- `PageView`: una vez al aceptar medición.
+- `ViewContent`: al inicializar la vista del conjunto.
+- `InitiateCheckout`: al comenzar a completar el formulario.
+- `Contact`: al abrir WhatsApp o enviar el pedido.
+- `Lead`: cuando el Web App confirma que el pedido se registró en Sheets.
+
+No se envían nombres, teléfonos, direcciones, cédulas ni correos a Meta. `Purchase` no se dispara por un clic de WhatsApp; queda reservado para una confirmación real posterior. La integración respeta la decisión “Ahora no” y no carga el píxel antes del consentimiento cuando el ID está configurado.
+
+## Vercel
+
+El repositorio incluye `vercel.json` y un build estático mínimo. El build copia la landing y los recursos a `dist/` y reemplaza el marcador del Pixel con `VITE_META_PIXEL_ID` si Vercel lo tiene configurado. No hay credenciales de Vercel en el repositorio.
+
+Para vincularlo desde tu cuenta: importa `Keviincortes/lucyboutique` en Vercel, conserva la raíz del proyecto, deja `npm run build` como comando de build y `dist` como directorio de salida. La publicación en GitHub Pages continúa funcionando desde `index.html`.
+
+## Pruebas recomendadas antes de anuncios
+
+- Completar una compra de un conjunto y otra de dos conjuntos.
+- Probar Bogotá y otra ciudad para validar $10.000 y $22.900.
+- Probar pago anticipado y pago contra entrega.
+- Confirmar que WhatsApp recibe colores, tallas, cantidades, promoción, envío y total.
+- Confirmar la fila en Google Sheets y el estado de comprobante.
+- Aceptar medición y comprobar `PageView`, `ViewContent`, `InitiateCheckout`, `Contact` y `Lead` en Meta Test Events.

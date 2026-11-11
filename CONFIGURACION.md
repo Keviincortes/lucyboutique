@@ -56,7 +56,7 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 
 ## Meta Pixel y consentimiento
 
-La landing tiene una integración segura con el Pixel `1441414194212741`. El ID también puede sobrescribirse en Vercel con `VITE_META_PIXEL_ID`; si se elimina el ID, el sitio sigue funcionando sin medición.
+La landing carga el Pixel `1441414194212741` por defecto al entrar. El ID también puede sobrescribirse en Vercel con `VITE_META_PIXEL_ID`; si se elimina el ID, el sitio sigue funcionando sin medición. El aviso informa sobre la medición y permite rechazarla mediante `fbq('consent','revoke')`.
 
 Cuando tengas el ID real del Pixel:
 
@@ -74,7 +74,7 @@ Eventos preparados:
 - `Contact`: al abrir WhatsApp o enviar el pedido.
 - `Lead`: cuando el Web App confirma que el pedido se registró en Sheets.
 
-No se envían nombres, teléfonos, direcciones, cédulas ni correos a Meta. `Purchase` no se dispara por un clic de WhatsApp; queda reservado para una confirmación real posterior. La integración respeta la decisión “Ahora no” y no carga el píxel antes del consentimiento cuando el ID está configurado.
+No se envían nombres, teléfonos, direcciones, cédulas ni correos a Meta. `Purchase` no se dispara por un clic de WhatsApp; queda reservado para una confirmación real posterior. La medición se carga por defecto; si la clienta pulsa “Rechazar medición”, se ejecuta `fbq('consent','revoke')`.
 
 ## Vercel
 

@@ -1,12 +1,12 @@
 # Activar pedidos gratis — Lucy Boutique
 
-La landing calcula el pedido, lo registra en Google Sheets y abre WhatsApp con el resumen:
+La landing calcula el pedido, intenta registrarlo en Google Sheets y abre WhatsApp con el resumen aunque Sheets tarde o falle:
 
 - Bogotá: $10.000.
-- Cualquier otra ciudad escrita por la clienta: aproximado $22.900.
+- Cualquier otra ciudad escrita por la clienta: $22.900.
 - Pago anticipado: producto + envío; incluye regalo.
 - Pago contra entrega: paga solo el envío primero; el producto se paga al recibir; no incluye regalo.
-- La clienta solicita por WhatsApp los datos para pagar y luego envía el comprobante en el mismo chat.
+- La clienta solicita por WhatsApp los datos para pagar y luego envía el comprobante en el mismo chat. Los datos de pago no se muestran en la landing.
 
 Para registrar pedidos automáticamente, el sitio necesita el Web App gratuito de Google Apps Script. No es seguro ni correcto poner secretos de Google o WhatsApp en `index.html`.
 
@@ -39,8 +39,8 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 ## 4. Flujo gratuito
 
 1. La clienta llena el pedido.
-2. El pedido se registra en Sheets.
-3. Se abre WhatsApp con todos los datos.
+2. Se prepara el enlace de WhatsApp y se intenta registrar el pedido en Sheets.
+3. WhatsApp se abre en un máximo de 3 segundos, aunque Sheets falle.
 4. La clienta solicita los datos de Nequi, DaviPlata, Bancolombia o transferencia.
 5. Envía el comprobante por WhatsApp.
 6. La encargada verifica el pago y cambia manualmente el estado en Sheets.

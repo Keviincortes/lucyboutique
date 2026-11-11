@@ -43,7 +43,10 @@
     .consent-banner{display:none;position:fixed;left:14px;right:14px;bottom:14px;z-index:30;background:#17121eee;border:1px solid #ffb5ce66;border-radius:16px;padding:13px 15px;box-shadow:0 16px 40px #000c;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}.consent-banner.show{display:flex;align-items:center;justify-content:space-between;gap:14px}.consent-banner p{margin:0;color:var(--muted);font-size:.82rem}.consent-banner b{display:block;color:var(--pink-light);margin-bottom:2px}.consent-actions{display:flex;gap:8px;flex:0 0 auto}.consent-actions button{border:1px solid #ffb5ce66;border-radius:999px;padding:8px 12px;background:#ffffff12;color:#fff;font-weight:900;cursor:pointer}.consent-actions .accept{background:var(--pink);border-color:var(--pink)}@media(max-width:520px){.consent-banner.show{align-items:stretch;flex-direction:column;gap:9px}.consent-actions{justify-content:flex-end}}
     .social-proof{display:flex;align-items:center;gap:12px;max-width:520px;margin:14px 0 0;padding:12px 15px;border:1px solid #ffb5ce66;border-radius:16px;background:linear-gradient(135deg,#ffffff12,rgba(239,93,145,.125));box-shadow:0 12px 26px #0005;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}.social-proof-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;background:linear-gradient(145deg,#ff8eb5,#c92e69);box-shadow:0 7px 16px #0006;font-size:1.35rem}.social-proof strong{display:block;color:#fff;font-size:1.18rem;line-height:1.05}.social-proof span{display:block;color:var(--muted);font-size:.78rem;margin-top:3px}.social-proof .counter{color:var(--pink-light);font-variant-numeric:tabular-nums}@media(max-width:520px){.social-proof{margin-top:12px;padding:10px 12px}.social-proof strong{font-size:1rem}.social-proof span{font-size:.7rem}}
     .form-consent{margin:9px 0 0;color:var(--muted);font-size:.72rem;line-height:1.35}.form-consent span{color:var(--pink-light)}.whatsapp-retry{width:100%;margin-top:10px;font-size:.88rem}.fabric-media{max-width:437px;margin:18px 0 0}.fabric-media img{display:block;width:100%;height:auto;aspect-ratio:437/387;object-fit:contain;border-radius:16px}.fabric-media p{margin:7px 0 0;color:var(--muted);font-size:.72rem}.fabric-media.reduced-motion img{content-visibility:auto}.review .stars{color:var(--gold);letter-spacing:.08em;font-size:1rem;margin-bottom:8px}.review cite{display:block;color:var(--pink-light);font-style:normal;font-size:.82rem;font-weight:900;margin-top:10px}@media(prefers-reduced-motion:reduce){.fabric-media img{animation:none}}
-  </style>
+</style>
+<style>
+    .review-grid{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}.review{display:flex;flex-direction:column}.review-heart{color:var(--pink-light);font-size:1.1rem;line-height:1;margin-bottom:5px}.review .stars{color:var(--gold);letter-spacing:.08em;font-size:1rem;margin-bottom:8px}.review p{color:var(--muted);line-height:1.55}.review cite{display:block;color:var(--pink-light);font-style:normal;font-size:.82rem;font-weight:900;margin-top:auto;padding-top:12px}@media(max-width:760px){.review-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
   <div class="hearts" aria-hidden="true"><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span><span class="heart">♥</span></div>
@@ -150,5 +153,27 @@
       const fabric=document.querySelector('#fabricGif');if(fabric&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){const loadFabric=()=>{if(fabric.dataset.src){fabric.src=fabric.dataset.src;fabric.removeAttribute('data-src')}};if('IntersectionObserver' in window){const io=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){loadFabric();io.disconnect()}},{rootMargin:'240px'});io.observe(fabric)}else loadFabric()}
     })();
   </script>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const main=document.querySelector('main'), old=document.querySelector('#resenas'), buy=document.querySelector('#comprar')?.closest('.section'), tela=document.querySelector('#tela');
+  if(!main||!old||!buy||!tela)return;
+  const cards=[
+    ['⭐⭐⭐⭐⭐','Bueno, bonito y a buen precio','“De verdad está muy lindo, la tela se siente cómoda y por el precio quedó súper bien.”','— Claudia V., Bogotá'],
+    ['⭐⭐⭐⭐⭐','Llegó rápido y completo','“Me llegó rapidísimo, todo completo y tal como se ve en la página. Quedé muy contenta.”','— María P., Cali'],
+    ['⭐⭐⭐⭐','Un conjunto que encantó','“Le compré el conjunto a mi hija y le encantó. La tela es suave y le quedó muy bonito.”','— Ema D., Pasto']
+  ];
+  const cardsBottom=[
+    ['⭐⭐⭐⭐⭐','La tela Poly Like se siente hermosa','“La tela está muy suave, no es gruesa y se ve igual que en las fotos. Me encantó.”','— Laura G., Bogotá'],
+    ['⭐⭐⭐⭐⭐','Bueno, bonito y económico','“Quedé feliz con mi conjunto. Se ve bonito puesto, es cómodo y vale totalmente la pena.”','— Claudia V., Bogotá'],
+    ['⭐⭐⭐⭐⭐','Llegó rapidísimo','“Recibí mi pedido muy rápido y en perfectas condiciones. Todo llegó completo.”','— Carolina H., Popayán'],
+    ['⭐⭐⭐⭐⭐','Perfecto para regalar','“Lo compré de regalo y les encantó. Se vio muy bonito y la persona quedó feliz 🎁.”','— Lorena, Cartagena'],
+    ['⭐⭐⭐⭐⭐','Muy cómodo y buena talla','“La tela Poly Like es suave y cómoda. La talla me quedó muy bien y el pantalón se ve hermoso.”','— María P., Cali'],
+    ['⭐⭐⭐⭐⭐','Dan ganas de pedir otro','“Me gustó completo: el color, la caída del pantalón y lo suave que es. Ya quiero pedir otro.”','— Carolina H., Popayán']
+  ];
+  const block=(id,data)=>{const section=document.createElement('section');section.className='section';section.id=id;section.innerHTML='<div class="wrap"><div class="section-head"><div class="eyebrow">LO QUE DICEN NUESTRAS CLIENTAS 💗</div><h2>Más de 830 mujeres ya eligieron su conjunto Poly Like 💗</h2><p class="muted">Comentarios reales de clientas de Lucy Boutique.</p></div><div class="benefits review-grid">'+data.map(([stars,title,text,author])=>'<article class="benefit review"><div class="review-heart">💗</div><div class="stars">'+stars+'</div><h3>'+title+'</h3><p>'+text+'</p><cite>'+author+'</cite></article>').join('')+'</div></div></section>';return section};
+  const top=block('resenas-top',cards), bottom=block('resenas',cardsBottom);
+  old.replaceWith(bottom);main.insertBefore(top,buy);main.insertBefore(bottom,tela);
+});
+</script>
 </body>
 </html>

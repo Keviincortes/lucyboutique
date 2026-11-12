@@ -123,6 +123,7 @@ module.exports = async function handler(req, res) {
     event_id: body.event_id || undefined,
     event_source_url: body.event_source_url || undefined,
     action_source: body.action_source || 'website',
+    test_event_code: body.test_event_code || undefined,
     user_data: userData,
     custom_data: body.custom_data && typeof body.custom_data === 'object' ? body.custom_data : {},
   };

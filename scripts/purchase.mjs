@@ -44,6 +44,7 @@ const payload = {
   fbc: flag('fbc'),
   email: flag('email'),
   phone: flag('phone'),
+  test_event_code: flag('test-event-code') || undefined,
   custom_data: {
     value,
     currency,

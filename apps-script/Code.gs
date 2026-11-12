@@ -33,7 +33,7 @@ const HEADERS=['Fecha','Referencia','Estado','Nombre','Cédula','Celular','Corre
 const HEADERS_INV=['Producto','Color','Talla','Stock (sets)','Costo unitario promedio','Valor en inventario','Total del color','Última entrada','Actualizado'];
 const HEADERS_MOV=['Fecha','Tipo','Producto','Color','Talla','Cantidad','Costo unitario','Total','Detalle','Referencia'];
 const HEADERS_GAS=['Fecha','Categoría','Descripción','Monto','Notas'];
-const HEADERS_FAC=['Número','Fecha','Referencia del pedido','Clienta','Celular','Ciudad','Detalle','Total','Estado','Notas'];
+const HEADERS_FAC=['Número','Fecha','Referencia del pedido','Clienta','Celular','Ciudad','Detalle','Subtotal','Envío','Total','Abono hoy','Saldo','Estado','Notas'];
 const HEADERS_PROD=['Nombre','Activo'];
 
 /* ============================ ENTRADAS ============================ */
@@ -210,7 +210,7 @@ function actualizarHojaInventario_(){
       const colorInfo=state.colores[producto+'|'+color]||{stock:0,entradas:0,costoTotal:0};
       const promColor=colorInfo.entradas>0?colorInfo.costoTotal/colorInfo.entradas:0;
       const totalColor=colorInfo.stock;
-      TALLAS.forEach(function(talla){
+      tallasDe_(state,producto,color).forEach(function(talla){
         const it=state.tallas[producto+'|'+color+'|'+talla];
         if(!it)return;
         rows.push([producto,color,talla,it.stock,it.entradas>0?it.costoTotal/it.entradas:0,it.stock*(it.entradas>0?it.costoTotal/it.entradas:0),totalColor,it.ultimaEntrada||'',new Date()]);
@@ -225,6 +225,19 @@ function actualizarHojaInventario_(){
   sheet.getRange(2,1,rows.length,HEADERS_INV.length).setValues(rows);
   const sobrantes=sheet.getLastRow()-(1+rows.length);
   if(sobrantes>0)sheet.getRange(2+rows.length,1,sobrantes,HEADERS_INV.length).clearContent();
+}
+
+/**
+ * Tallas que se muestran para un producto+color: las de siempre (S, M, L, XL)
+ * mas las que hayan aparecido en los movimientos (por ejemplo XS si se vendio).
+ */
+function tallasDe_(state,producto,color){
+  const out=TALLAS.slice();
+  Object.keys(state.tallas).forEach(function(k){
+    const t=state.tallas[k].talla;
+    if(t && out.indexOf(t)<0)out.push(t);
+  });
+  return out;
 }
 
 function estadoInventario_(){
@@ -335,22 +348,35 @@ function guardarFactura_(raw){
   if(!ref)throw new Error('Falta la referencia del pedido');
   const sheet=getSheet_(SHEET_FACTURAS);
   ensureHeaders_(sheet,HEADERS_FAC);
-  const last=sheet.getLastRow();
-  let consecutivo=1;
-  for(let i=2;i<=last;i++){
-    const num=String(sheet.getRange(i,1).getValue()||'');
-    const m=/(\d+)\s*$/.exec(num);
-    if(m)consecutivo=Math.max(consecutivo,Number(m[1])+1);
-  }
-  const numero='LB-'+('000'+consecutivo).slice(-4);
+  const numero=siguienteNumero_(sheet);
   const estado=ESTADOS_FACTURA.indexOf(String(raw.estado||'').toLowerCase())>=0?String(raw.estado).toLowerCase():'pendiente';
-  sheet.appendRow([numero,new Date(),ref,raw.clienta||'',raw.celular||'',raw.ciudad||'',raw.detalle||'',Number(raw.total)||0,estado,raw.notas||'']);
+  const subtotal=Number(raw.subtotal)||0;
+  const envio=Number(raw.envio)||0;
+  const total=Number(raw.total)||(subtotal+envio);
+  const abono=Number(raw.abono)||0;
+  const saldo=Number(raw.saldo)||Math.max(0,total-abono);
+  sheet.appendRow([numero,new Date(),ref,raw.clienta||'',raw.celular||'',raw.ciudad||'',raw.detalle||'',subtotal,envio,total,abono,saldo,estado,raw.notas||'']);
   return json_({ok:true,numero:numero});
 }
 
 function guardarFacturaManual_(raw){
   const sheet=getSheet_(SHEET_FACTURAS);
   ensureHeaders_(sheet,HEADERS_FAC);
+  const numero=siguienteNumero_(sheet);
+  const subtotal=Number(raw.subtotal)||0;
+  const envio=Number(raw.envio)||0;
+  const total=Number(raw.total)||(subtotal+envio);
+  const abono=Number(raw.abono)||0;
+  const saldo=Math.max(0,total-abono);
+  if(!total)throw new Error('El total no puede quedar en cero');
+  if(!raw.clienta)throw new Error('Falta el nombre de la clienta');
+  const estado=ESTADOS_FACTURA.indexOf(String(raw.estado||'').toLowerCase())>=0?String(raw.estado).toLowerCase():'pagada';
+  const ref='MANUAL-'+numero;
+  sheet.appendRow([numero,new Date(),ref,raw.clienta||'',raw.celular||'',raw.ciudad||'',raw.detalle||'',subtotal,envio,total,abono,saldo,estado,raw.notas||'']);
+  return json_({ok:true,numero:numero,referencia:ref,total:total,abono:abono,saldo:saldo});
+}
+
+function siguienteNumero_(sheet){
   const last=sheet.getLastRow();
   let consecutivo=1;
   for(let i=2;i<=last;i++){
@@ -358,14 +384,7 @@ function guardarFacturaManual_(raw){
     const m=/(\d+)\s*$/.exec(num);
     if(m)consecutivo=Math.max(consecutivo,Number(m[1])+1);
   }
-  const numero='LB-'+('000'+consecutivo).slice(-4);
-  const total=Number(raw.total)||0;
-  if(!total)throw new Error('El total no puede quedar en cero');
-  if(!raw.clienta)throw new Error('Falta el nombre de la clienta');
-  const estado=ESTADOS_FACTURA.indexOf(String(raw.estado||'').toLowerCase())>=0?String(raw.estado).toLowerCase():'pagada';
-  const ref='MANUAL-'+numero;
-  sheet.appendRow([numero,new Date(),ref,raw.clienta||'',raw.celular||'',raw.ciudad||'',raw.detalle||'',total,estado,raw.notas||'']);
-  return json_({ok:true,numero:numero,referencia:ref});
+  return 'LB-'+('000'+consecutivo).slice(-4);
 }
 
 function borrarFactura_(raw){
@@ -404,11 +423,13 @@ function dashboard_(){
 
   const inventario=[];
   const porProducto={};
+  const tallasPanel=[];
   Object.keys(state.colores).forEach(function(pk){
     const c=state.colores[pk];
     if(!porProducto[c.producto])porProducto[c.producto]={producto:c.producto,colores:{}};
     porProducto[c.producto].colores[c.color]=c;
-    TALLAS.forEach(function(talla){
+    tallasDe_(state,c.producto,c.color).forEach(function(talla){
+      if(tallasPanel.indexOf(talla)<0)tallasPanel.push(talla);
       const it=state.tallas[c.producto+'|'+c.color+'|'+talla];
       if(!it)return;
       const prom=it.entradas>0?it.costoTotal/it.entradas:0;
@@ -488,7 +509,9 @@ function dashboard_(){
   const facturas=leerFilas_(SHEET_FACTURAS,HEADERS_FAC).map(function(r,i){
     return {fila:i+2,numero:r[0]||'',fecha:fechaTexto_(r[1]),ts:epoch_(r[1]),referencia:r[2]||'',
       clienta:r[3]||'',celular:r[4]||'',ciudad:r[5]||'',detalle:r[6]||'',
-      total:Number(r[7])||0,estado:r[8]||'pendiente',notas:r[9]||'',
+      subtotal:Number(r[7])||0,envio:Number(r[8])||0,total:Number(r[9])||0,
+      abono:Number(r[10])||0,saldo:Number(r[11])||0,
+      estado:r[12]||'pendiente',notas:r[13]||'',
       manual:String(r[2]||'').indexOf('MANUAL-')===0};
   });
 
@@ -502,7 +525,7 @@ function dashboard_(){
     ok:true,
     generado:new Date().toISOString(),
     colores:COLORES,
-    tallas:TALLAS,
+    tallas:tallasPanel.length?tallasPanel:TALLAS,
     productos:productos,
     categorias:CATEGORIAS_GASTO,
     estados:ESTADOS_PEDIDO,

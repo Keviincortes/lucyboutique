@@ -198,14 +198,24 @@ h1,h2,h3{font-weight:700}
     <div class="card"><label for="mCelular">Celular</label><input id="mCelular" placeholder="300 000 0000"></div>
     <div class="card"><label for="mCiudad">Ciudad</label><input id="mCiudad" placeholder="Bogotá"></div>
     <div class="card full"><label for="mDireccion">Dirección de entrega</label><input id="mDireccion" placeholder="Calle, número, barrio"></div>
-    <div class="card"><label for="mMetodo">Forma de pago</label><select id="mMetodo"><option value="anticipado">Pago anticipado</option><option value="contraentrega">Contra entrega</option></select></div>
     <div class="card"><label for="mCanal">Canal de pago</label><select id="mCanal"><option value="nequi">Nequi</option><option value="daviplata">DaviPlata</option><option value="bancolombia">Bancolombia</option><option value="transferencia">Transferencia</option></select></div>
     <div class="card full">
       <label>Productos</label>
       <div id="mItems"></div>
       <button type="button" id="mAdd" class="btn btn-ghost btn-sm" style="margin-top:8px">+ Agregar producto</button>
     </div>
-    <div class="card"><label for="mTotal">Total de la factura</label><input id="mTotal" readonly value="$0"></div>
+    <div class="card"><label for="mTotal">Total de los productos</label><input id="mTotal" readonly value="$0"></div>
+    <div class="card"><label for="mEnvio">Valor del envío</label><input id="mEnvio" type="number" min="0" step="500" value="0" placeholder="0 = sin envío"></div>
+    <div class="card"><label for="mTotal2">Total a pagar</label><input id="mTotal2" readonly value="$0"></div>
+    <div class="card"><label for="mAbono">Abono a pagar hoy</label><input id="mAbono" type="number" min="0" step="500" value="0"></div>
+    <div class="card"><label for="mSaldo">Saldo a pagar al recibir</label><input id="mSaldo" readonly value="$0"></div>
+    <div class="card"><label for="mFormaEnvio">El envío se paga</label>
+      <select id="mFormaEnvio">
+        <option value="anticipado">Adelantado (con el abono)</option>
+        <option value="contraentrega">Al recibir el conjunto</option>
+        <option value="local">Sin envío (entrega en local)</option>
+      </select>
+    </div>
     <div class="card full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-pink" id="mSave">Generar factura</button>
       <small id="mMsg" style="color:#A78FA6;font-size:.8rem"></small>
@@ -280,7 +290,12 @@ h1,h2,h3{font-weight:700}
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function fmt(n){return '$'+Number(n||0).toLocaleString('es-CO',{maximumFractionDigits:0})}
-  function fTel(v){var s=String(v||'').replace(/\D/g,'');return s.length?('+57 '+s.slice(-10,-8)+' '+s.slice(-8,-4)+' '+s.slice(-4)):'—'}
+  function fTel(v){
+    var s=String(v||'').replace(/\D/g,'');
+    if(s.length<10) return s?('+57 '+s):'—';
+    var d=s.slice(-10);
+    return '+57 '+d.slice(0,3)+' '+d.slice(3,6)+' '+d.slice(6);
+  }
   function fFechaL(v){
     if(!v)return '';
     var s=String(v).trim();
@@ -396,7 +411,18 @@ h1,h2,h3{font-weight:700}
     }).join('')||'<tr><td colspan="5" class="inv-empty">Sin productos</td></tr>';
 
     var pay='';
-    if(inv.metodo==='anticipado'){
+    if(inv.manual){
+      var hoy=inv.tot.hoy, saldo=inv.tot.saldo;
+      if(inv.formaEnvio==='local'){
+        pay='<p>🏬 Entrega en <b>Lucy Boutique</b> (sin envío).</p>';
+        if(hoy>0)pay+='<p>💳 Abono de <b>'+fmt(hoy)+'</b> por '+cl+(num?': <b>'+esc(num)+'</b>':'')+'.</p>';
+      }else{
+        pay='<p>💳 Transfiere <b>'+fmt(hoy)+'</b> por '+cl+(num?': <b>'+esc(num)+'</b>':'')+' a Lucy Boutique.</p>';
+        if(saldo>0)pay+='<p>📦 Saldo de <b>'+fmt(saldo)+'</b> al recibir el conjunto.</p>';
+        else pay+='<p>📦 Entrega en <b>menos de 24 h</b> tras confirmar el pago.</p>';
+      }
+      pay+='<p>📸 Envía el comprobante por WhatsApp <b>'+fTel(SETTINGS.whatsapp)+'</b>.</p>';
+    }else if(inv.metodo==='anticipado'){
       pay='<p>💳 Transfiere <b>'+fmt(inv.tot.hoy)+'</b> por '+cl+(num?': <b>'+esc(num)+'</b>':'')+' a Lucy Boutique.</p>'
         +'<p>📸 Envía el comprobante por WhatsApp <b>'+fTel(SETTINGS.whatsapp)+'</b>.</p>'
         +'<p>🚀 Despachamos en <b>menos de 24 h</b> tras confirmar el pago.</p>';
@@ -444,8 +470,8 @@ h1,h2,h3{font-weight:700}
       +'<div class="it-row"><span>Subtotal productos</span><b>'+fmt(inv.tot.sub)+'</b></div>'
       +'<div class="it-row"><span>Envío</span><b>'+fmt(inv.tot.envio)+'</b></div>'
       +'<div class="it-row it-total"><span>TOTAL PEDIDO</span><span>'+fmt(inv.tot.total)+'</span></div>'
-      +'<div class="inv-hoy"><span>PAGA HOY</span><strong>'+fmt(inv.tot.hoy)+'</strong></div>'
-      +(inv.tot.saldo>0?'<div class="inv-saldo">Saldo contra entrega: <b>'+fmt(inv.tot.saldo)+'</b></div>':'')
+      +'<div class="inv-hoy"><span>'+(inv.tot.hoyLabel||'PAGA HOY')+'</span><strong>'+fmt(inv.tot.hoy)+'</strong></div>'
+      +(inv.tot.saldo>0?'<div class="inv-saldo">'+(inv.tot.saldoLabel||'Saldo contra entrega')+': <b>'+fmt(inv.tot.saldo)+'</b></div>':'')
       +'</div></div>'
       +'<div class="inv-foot"><div class="inv-thanks">'+esc(SETTINGS.pie)+' 💗</div>'
       +'<div class="inv-contact">'+contact+'</div>'
@@ -470,7 +496,9 @@ h1,h2,h3{font-weight:700}
       body:JSON.stringify({action:'save_invoice',referencia:CURRENT.referencia,clienta:CURRENT.nombre,
         celular:CURRENT.celular,ciudad:CURRENT.ciudad,
         detalle:(INVOICE.items||[]).map(function(it){return it.nombre+(it.color?' '+it.color:'')+(it.talla?' T'+it.talla:'')}).join(' · '),
-        total:INVOICE.tot.total,estado:extra.estado,notas:extra.notas})})
+        subtotal:INVOICE.tot.sub,envio:INVOICE.tot.envio,total:INVOICE.tot.total,
+        abono:INVOICE.tot.hoy,saldo:INVOICE.tot.saldo,
+        estado:extra.estado,notas:extra.notas})})
       .then(function(r){return r.json().then(function(j){
         if(!r.ok||j.ok===false)throw new Error(j.error||'No se pudo guardar');
         return j;
@@ -536,6 +564,7 @@ h1,h2,h3{font-weight:700}
 
   /* ---------------- factura manual ---------------- */
   var mItems = [];
+  var abonoManualEditado = false;
 
   function renderManualItems(){
     if(!mItems.length) mItems = [{ desc:'', qty:1, price:69900 }];
@@ -574,9 +603,16 @@ h1,h2,h3{font-weight:700}
   }
 
   function calcularManual(){
-    var t = mItems.reduce(function(s,it){ return s + (Number(it.qty)||0)*(Number(it.price)||0); }, 0);
-    $('#mTotal').value = fmt(t);
-    return t;
+    var sub = mItems.reduce(function(s,it){ return s + (Number(it.qty)||0)*(Number(it.price)||0); }, 0);
+    var envio = Number($('#mEnvio').value)||0;
+    var total = sub + envio;
+    var abono = Number($('#mAbono').value)||0;
+    $('#mTotal').value = fmt(sub);
+    $('#mTotal2').value = fmt(total);
+    if(!abonoManualEditado) $('#mAbono').value = total;
+    abono = Number($('#mAbono').value)||0;
+    $('#mSaldo').value = fmt(Math.max(0,total-abono));
+    return { sub:sub, envio:envio, total:total, abono:abono, saldo:Math.max(0,total-abono) };
   }
 
   function guardarManual(){
@@ -584,36 +620,41 @@ h1,h2,h3{font-weight:700}
     if(!nombre){ $('#mMsg').textContent = 'Escribe el nombre de la clienta.'; return; }
     var items = mItems.filter(function(it){ return it.desc.trim() && (Number(it.qty)||0) > 0; });
     if(!items.length){ $('#mMsg').textContent = 'Agrega al menos un producto.'; return; }
-    var total = calcularManual();
-    if(!total){ $('#mMsg').textContent = 'El total no puede quedar en cero.'; return; }
+    var t = calcularManual();
+    if(!t.total){ $('#mMsg').textContent = 'El total no puede quedar en cero.'; return; }
+    var formaEnvio = $('#mFormaEnvio').value;
     var detalle = items.map(function(it){ return it.desc.trim()+' x'+it.qty+' ('+fmt(it.price)+')'; }).join(' · ');
     $('#mMsg').textContent = 'Guardando…';
     fetch('/api/panel',{method:'POST',headers:{'Content-Type':'application/json','x-panel-key':KEY},
       body:JSON.stringify({action:'save_invoice_manual',clienta:nombre,celular:$('#mCelular').value.trim(),
-        ciudad:$('#mCiudad').value.trim(),detalle:detalle,total:total,estado:'pagada',
-        notas:$('#notas').value.trim()})})
+        ciudad:$('#mCiudad').value.trim(),detalle:detalle,
+        subtotal:t.sub,envio:t.envio,total:t.total,abono:t.abono,saldo:t.saldo,
+        estado:'pagada',notas:$('#notas').value.trim()})})
       .then(function(r){ return r.json().then(function(j){
         if(!r.ok||j.ok===false) throw new Error(j.error||'No se pudo guardar');
         return j;
       })})
       .then(function(j){
-        var detallePedido = items.map(function(it){ return it.desc.trim(); }).join(' · ');
+        var metodo = (formaEnvio==='contraentrega') ? 'contraentrega' : 'anticipado';
         INVOICE = {
-          numero:j.numero, ref:j.referencia||'MANUAL', fecha:hoyISO(), estado:'pagada',
+          numero:j.numero, ref:j.referencia||'MANUAL', fecha:hoyISO(), estado:'pagada', manual:true,
           clienta:{nombre:nombre,cedula:$('#mCedula').value.trim(),celular:$('#mCelular').value.trim(),
             ciudad:$('#mCiudad').value.trim(),barrio:'',direccion:$('#mDireccion').value.trim(),extra:''},
           items:items.map(function(it){
             return {nombre:it.desc.trim(),detalle:'',color:'',talla:'',qty:Number(it.qty)||1,price:Number(it.price)||0};
           }),
-          envio:0, metodo:$('#mMetodo').value, canal:$('#mCanal').value,
-          regalo:$('#mMetodo').value==='anticipado', notas:$('#notas').value.trim(),
-          tot:{sub:total,envio:0,total:total,hoy:total,saldo:0}
+          envio:t.envio, metodo:metodo, canal:$('#mCanal').value,
+          formaEnvio:formaEnvio,
+          regalo:metodo==='anticipado' && t.saldo===0, notas:$('#notas').value.trim(),
+          tot:{sub:t.sub,envio:t.envio,total:t.total,hoy:t.abono,saldo:t.saldo, hoyLabel:'ABONO HOY', saldoLabel:'Saldo a pagar'}
         };
         $('#numero').value = j.numero;
         $('#manualBox').hidden = true;
         $('#cfgBox').hidden = false;
+        $('#hint').hidden = false;
         $('#estado').value = 'pagada';
-        $('#hint').innerHTML = 'Factura manual <b>'+esc(j.numero)+'</b> · total <b>'+fmt(total)+'</b>. Descarga el PDF o mándalo por WhatsApp.';
+        $('#hint').innerHTML = 'Factura manual <b>'+esc(j.numero)+'</b> · total <b>'+fmt(t.total)+'</b> · abono hoy <b>'+fmt(t.abono)+'</b>'
+          + (t.saldo>0 ? ' · saldo <b>'+fmt(t.saldo)+'</b>' : '') + '. Descarga el PDF o mándalo por WhatsApp.';
         $('#preview').innerHTML = invoiceHTML(INVOICE);
         $('#mMsg').textContent = '';
         toast('Factura '+j.numero+' guardada', 'ok');
@@ -715,6 +756,14 @@ h1,h2,h3{font-weight:700}
   $('#btnReload').addEventListener('click',function(){cargar((location.search.match(/ref=([^&]+)/)||[])[1]||'')});
   $('#mAdd').addEventListener('click',function(){ mItems.push({desc:'',qty:1,price:69900}); renderManualItems(); });
   $('#mSave').addEventListener('click',guardarManual);
+  $('#mEnvio').addEventListener('input',function(){ calcularManual(); });
+  $('#mAbono').addEventListener('input',function(){ abonoManualEditado=true; calcularManual(); });
+  $('#mFormaEnvio').addEventListener('change',function(){
+    var v=this.value;
+    if(v==='local'){ $('#mEnvio').value=0; }
+    else if(v==='contraentrega' && !Number($('#mAbono').value)){ /* el abono lo pone la clienta */ }
+    calcularManual();
+  });
   ['#canal','#estado','#notas'].forEach(function(s){$(s).addEventListener('change',render)});
 
   $('#btnLogin').addEventListener('click',function(){

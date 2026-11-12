@@ -53,11 +53,51 @@ El número de factura (`LB-0001`, `LB-0002`…) se asigna solo la primera vez qu
 
 ### Factura manual (venta por aparte)
 
-En la sección **Facturas emitidas** del panel está el botón **＋ Factura manual**. Sirve para vender sin que el pedido venga de la landing: pones los datos de la clienta, agregas los productos (con cantidad y precio) y se genera la factura con su número. **Queda guardada en la base de datos de ventas**: cuenta en "Ventas confirmadas", en "Cobrado" y en las ganancias del panel.
+En la sección **Facturas emitidas** del panel está el botón **＋ Factura manual**. Sirve para vender sin que el pedido venga de la landing: pones los datos de la clienta, agregas los productos (con cantidad y precio) y se genera la factura con su número.
+
+La factura manual tiene **envío y abono**:
+
+| Campo | Para qué sirve |
+| --- | --- |
+| Total de los productos | Se calcula solo con los productos que agregaste |
+| Valor del envío | Lo que cobra el envío (0 = entrega en local, sin envío) |
+| Total a pagar | Productos + envío |
+| Abono a pagar hoy | Lo que paga la clienta en este momento |
+| Saldo a pagar al recibir | Lo que queda pendiente |
+| El envío se paga | Adelantado (con el abono), al recibir el conjunto, o sin envío |
+
+En la factura sale **"ABONO HOY"** con el valor del abono y **"Saldo a pagar"** con lo que queda, y las instrucciones de pago dicen exactamente qué transferir. Ejemplo: conjunto $69.900 + envío $10.000 = $79.900, con un abono de $50.000 la factura dice "Transfiere $50.000 por Nequi" y "Saldo de $29.900 al recibir el conjunto".
+
+**Queda guardada en la base de datos de ventas**: cuenta en "Ventas confirmadas", en "Cobrado" y en las ganancias del panel.
 
 ### Sesión: ya no pide contraseña en la factura
 
 El panel guarda la clave en una **cookie** (`lucy_panel_key`), no solo en la sesión. Por eso, si ya estás dentro del panel, al abrir la factura **no te pide la contraseña** en ninguna pestaña ni en el celular.
+
+### Si borras filas de la hoja por error
+
+Google Sheets guarda el historial de la hoja. Para recuperar filas:
+
+1. En la hoja, haz clic en el **reloj** (arriba a la derecha, junto al ícono de comentarios).
+2. Elige la versión anterior a la que quieres ("Restablecer esta versión").
+
+Las versiones las guarda la cuenta de la dueña, así que los cambios hechos por el script también aparecen ahí.
+
+### Selector de tallas por grupo
+
+- Tallas manejadas en el panel: **S, M, L, XL** (la XS se quitó de los grupos).
+- Grupos: **S + M** y **L + XL**. Al elegir un grupo, la cantidad se aplica a cada talla del grupo (3 en S y 3 en M = 6 sets) y los números se pueden ajustar uno por uno.
+- Si la landing vendiera una talla que no está en los grupos (por ejemplo XS), el inventario la muestra igual, porque las tallas se toman de los movimientos reales.
+
+### Las miniaturas del selector de color (landing)
+
+Las fotos que salen en los cuadritos de "Elige tu color" (`assets/sw-<color>.webp`) son **el conjunto completo** (chaqueta + pantalón + tenis), no solo el pantalón, compuestos sobre el fondo del propio estudio. Se regeneran con:
+
+```powershell
+npm run thumbs
+```
+
+Si cambias las fotos de los colores, vuelve a correr ese comando.
 
 ### Las pestañas de la hoja
 

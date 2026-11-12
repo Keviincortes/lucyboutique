@@ -1,19 +1,27 @@
 /**
- * Genera las miniaturas de tela (assets/sw-<color>.webp) que usa el selector de
- * color del formulario de pedido. Necesita ffmpeg en el PATH.
+ * Genera las miniaturas de tela (assets/sw-<color>.webp) que usa el selector
+ * de color de la landing.
+ *
+ * Cada miniatura es el FOTOGRAFO COMPLETO del conjunto (chaqueta + pantalon),
+ * recortado de la primera foto del color y compuesto sobre el mismo fondo de
+ * estudio, para que se vea toda la prenda y no solo una parte.
  *
  *   npm run thumbs
+ *
+ * Necesita ffmpeg en el PATH.
  */
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-const COLORS = ['rosa', 'negro', 'blanco', 'gris', 'cafe', 'chocolate'];
+const COLORES = ['rosa', 'negro', 'blanco', 'gris', 'cafe', 'chocolate'];
 
-// Recorte del tercer panel de la foto (detalle de la tela con el cordón)
-const CROP = 'crop=133:190:267:310,scale=266:380';
+// Recorte de la primera foto (frontal) + fondo del propio estudio
+const FILTER = '[0:v]crop=133:496:0:2,scale=-1:268[fig];' +
+  '[0:v]crop=24:24:2:2,scale=188:268[bg];' +
+  '[bg][fig]overlay=(W-w)/2:0';
 
 let failed = 0;
-for (const color of COLORS) {
+for (const color of COLORES) {
   const src = `assets/${color}-400.webp`;
   const out = `assets/sw-${color}.webp`;
   if (!existsSync(src)) {
@@ -23,7 +31,8 @@ for (const color of COLORS) {
   }
   const r = spawnSync(
     'ffmpeg',
-    ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-vf', CROP, '-c:v', 'libwebp', '-q:v', '74', '-compression_level', '6', out],
+    ['-hide_banner', '-loglevel', 'error', '-y', '-i', src, '-filter_complex', FILTER,
+      '-frames:v', '1', '-c:v', 'libwebp', '-q:v', '78', '-compression_level', '6', out],
     { stdio: 'inherit' }
   );
   if (r.status !== 0) failed++;

@@ -1,13 +1,14 @@
 /**
- * LUCY BOUTIQUE — Pedidos, inventario, compras, gastos y dashboard
- * ---------------------------------------------------------------
+ * LUCY BOUTIQUE — Pedidos, inventario por talla, compras, gastos, facturas
+ * ---------------------------------------------------------------------
  * El flujo de pedidos NO cambia: la landing sigue enviando {action:'create_order'}
  * y se sigue guardando la fila en la pestaña PEDIDOS con las mismas columnas.
  *
  * Lo nuevo:
- *   - INVENTARIO : foto del stock por color (se recalcula sola)
+ *   - INVENTARIO : stock por color y por talla (XS, S, M, L, XL)
  *   - MOVIMIENTOS: libro de entradas y salidas (inicial, compra, venta, ajuste)
  *   - GASTOS     : empaques, pauta, transporte, etc.
+ *   - FACTURAS   : facturas de venta emitidas (con número consecutivo)
  *   - Dashboard  : un solo JSON con todo para pintar el panel
  *
  * Las acciones nuevas exigen la clave PANEL_KEY (propiedad del script).
@@ -17,15 +18,19 @@ const SHEET_PEDIDOS='PEDIDOS';
 const SHEET_INVENTARIO='INVENTARIO';
 const SHEET_MOVIMIENTOS='MOVIMIENTOS';
 const SHEET_GASTOS='GASTOS';
+const SHEET_FACTURAS='FACTURAS';
 
 const COLORES=['Rosa','Negro','Blanco','Gris','Café','Chocolate'];
+const TALLAS=['XS','S','M','L','XL'];
 const CATEGORIAS_GASTO=['Empaque','Pauta publicitaria','Transporte y gasolina','Impuestos y comisiones','Otros'];
 const ESTADOS_PEDIDO=['PENDIENTE COMPROBANTE','PAGADO','CONTRAENTREGA ENVIADO','ENTREGADO','CANCELADO'];
+const ESTADOS_FACTURA=['pendiente','pagada','anulada'];
 
 const HEADERS=['Fecha','Referencia','Estado','Nombre','Cédula','Celular','Correo','Ciudad','Dirección exacta','Barrio','Apartamento o casa','Cantidad de sets','Detalle de cada sudadera','Valor de las sudaderas','Valor del envío','Valor pagado hoy','Forma de pago','Regalo','Comprobante','Notas'];
-const HEADERS_INV=['Color','Stock (sets)','Costo unitario promedio','Valor en inventario','Última entrada','Actualizado'];
-const HEADERS_MOV=['Fecha','Tipo','Color','Cantidad','Costo unitario','Total','Detalle','Referencia'];
+const HEADERS_INV=['Color','Talla','Stock (sets)','Costo unitario promedio','Valor en inventario','Total del color','Última entrada','Actualizado'];
+const HEADERS_MOV=['Fecha','Tipo','Color','Talla','Cantidad','Costo unitario','Total','Detalle','Referencia'];
 const HEADERS_GAS=['Fecha','Categoría','Descripción','Monto','Notas'];
+const HEADERS_FAC=['Número','Fecha','Referencia del pedido','Clienta','Celular','Ciudad','Detalle','Total','Estado','Notas'];
 
 /* ============================ ENTRADAS ============================ */
 
@@ -51,6 +56,8 @@ function doPost(e){
     if(action==='set_order_status'){assertKey_(raw.key);return cambiarEstado_(raw)}
     if(action==='delete_expense'){assertKey_(raw.key);return borrarGasto_(raw)}
     if(action==='delete_movement'){assertKey_(raw.key);return borrarMovimiento_(raw)}
+    if(action==='save_invoice'){assertKey_(raw.key);return guardarFactura_(raw)}
+    if(action==='delete_invoice'){assertKey_(raw.key);return borrarFactura_(raw)}
     return json_({ok:false,error:'Acción inválida'});
   }catch(error){return json_({ok:false,error:error.message})}
 }
@@ -127,9 +134,13 @@ function descontarInventario_(o){
   const rows=[];
   o.items.forEach(function(item,index){
     const color=colorCanonica_(item.color);
-    const info=state[color]||{entradas:0,costoTotal:0};
-    const promedio=info.entradas>0?info.costoTotal/info.entradas:0;
-    rows.push([now,'PEDIDO',color,1,promedio,promedio,'Venta '+o.reference+' · Set '+(index+1)+' · Talla '+(item.size||''),o.reference]);
+    const talla=tallaCanonica_(item.size);
+    const porTalla=state.tallas[color+'|'+talla];
+    const porColor=state.colores[color];
+    let promedio=0;
+    if(porTalla&&porTalla.entradas>0)promedio=porTalla.costoTotal/porTalla.entradas;
+    else if(porColor&&porColor.entradas>0)promedio=porColor.costoTotal/porColor.entradas;
+    rows.push([now,'PEDIDO',color,talla,1,promedio,promedio,'Venta '+o.reference+' · Set '+(index+1)+(talla?' · Talla '+talla:''),o.reference]);
   });
   if(rows.length)sheet.getRange(sheet.getLastRow()+1,1,rows.length,HEADERS_MOV.length).setValues(rows);
   actualizarHojaInventario_();
@@ -139,12 +150,34 @@ function guardarMovimiento_(raw){
   const tipo=String(raw.tipo||'COMPRA').toUpperCase();
   if(['INICIAL','COMPRA','AJUSTE','DEVOLUCION'].indexOf(tipo)<0)throw new Error('Tipo no válido');
   const color=colorCanonica_(raw.color);
-  const cantidad=Number(raw.cantidad)||0;
-  if(!cantidad)throw new Error('Cantidad inválida');
   const costo=Number(raw.costoUnitario)||0;
+  const detalle=raw.detalle||'';
+  const referencia=raw.referencia||'';
   const sheet=getSheet_(SHEET_MOVIMIENTOS);
   ensureHeaders_(sheet,HEADERS_MOV);
-  sheet.appendRow([new Date(),tipo,color,cantidad,costo,cantidad*costo,raw.detalle||'',raw.referencia||'']);
+  const now=new Date();
+  const rows=[];
+
+  const tallas=raw.tallas&&typeof raw.tallas==='object'?raw.tallas:null;
+  if(tallas){
+    let suma=0;
+    Object.keys(tallas).forEach(function(t){suma+=Number(tallas[t])||0});
+    const total=Number(raw.cantidad)||suma;
+    if(suma&&total&&suma!==total)throw new Error('El desglose por talla no suma la cantidad');
+    Object.keys(tallas).forEach(function(t){
+      const q=Number(tallas[t])||0;
+      if(!q)return;
+      rows.push([now,tipo,color,tallaCanonica_(t),q,costo,q*costo,detalle,referencia]);
+    });
+    if(!rows.length&&total)rows.push([now,tipo,color,'',total,costo,total*costo,detalle,referencia]);
+    if(!rows.length)throw new Error('Cantidad inválida');
+  }else{
+    const cantidad=Number(raw.cantidad)||0;
+    if(!cantidad)throw new Error('Cantidad inválida');
+    rows.push([now,tipo,color,tallaCanonica_(raw.talla),cantidad,costo,cantidad*costo,detalle,referencia]);
+  }
+
+  sheet.getRange(sheet.getLastRow()+1,1,rows.length,HEADERS_MOV.length).setValues(rows);
   actualizarHojaInventario_();
   return json_({ok:true});
 }
@@ -162,13 +195,24 @@ function actualizarHojaInventario_(){
   const state=estadoInventario_();
   const sheet=getSheet_(SHEET_INVENTARIO);
   ensureHeaders_(sheet,HEADERS_INV);
-  const colors=Object.keys(state);
-  const rows=colors.map(function(color){
-    const it=state[color];
-    const promedio=it.entradas>0?it.costoTotal/it.entradas:0;
-    return [color,it.stock,promedio,it.stock*promedio,it.ultimaEntrada||'',new Date()];
+  const rows=[];
+  COLORES.forEach(function(color){
+    const colorInfo=state.colores[color]||{stock:0,entradas:0,costoTotal:0};
+    const promColor=colorInfo.entradas>0?colorInfo.costoTotal/colorInfo.entradas:0;
+    const totalColor=colorInfo.stock;
+    const filas=[];
+    TALLAS.forEach(function(talla){
+      const it=state.tallas[color+'|'+talla];
+      if(!it)return;
+      filas.push([color,talla,it.stock,it.entradas>0?it.costoTotal/it.entradas:0,it.stock*(it.entradas>0?it.costoTotal/it.entradas:0),totalColor,it.ultimaEntrada||'',new Date()]);
+    });
+    const libre=state.tallas[color+'|'];
+    if(libre&&(libre.stock||libre.entradas||libre.salidas)){
+      filas.push([color,'Sin desglose',libre.stock,libre.entradas>0?libre.costoTotal/libre.entradas:0,libre.stock*(libre.entradas>0?libre.costoTotal/libre.entradas:0),totalColor,libre.ultimaEntrada||'',new Date()]);
+    }
+    filas.forEach(function(f){rows.push(f)});
   });
-  if(!rows.length)rows.push(['','','','','',new Date()]);
+  if(!rows.length)rows.push(['','','','','','','',new Date()]);
   sheet.getRange(2,1,rows.length,HEADERS_INV.length).setValues(rows);
   const sobrantes=sheet.getLastRow()-(1+rows.length);
   if(sobrantes>0)sheet.getRange(2+rows.length,1,sobrantes,HEADERS_INV.length).clearContent();
@@ -176,23 +220,39 @@ function actualizarHojaInventario_(){
 
 function estadoInventario_(){
   const movs=leerMovimientos_();
-  const map={};
-  COLORES.forEach(function(color){map[color]={color:color,stock:0,entradas:0,costoTotal:0,salidas:0,costeVendido:0,ultimaEntrada:''}});
+  const tallas={};
+  const colores={};
+  COLORES.forEach(function(color){
+    colores[color]={color:color,stock:0,entradas:0,costoTotal:0,salidas:0,costeVendido:0,ultimaEntrada:'',tsUltima:0,tallas:{}};
+    TALLAS.forEach(function(talla){tallas[color+'|'+talla]={color:color,talla:talla,stock:0,entradas:0,costoTotal:0,salidas:0,costeVendido:0,ultimaEntrada:'',tsUltima:0}});
+    tallas[color+'|']={color:color,talla:'',stock:0,entradas:0,costoTotal:0,salidas:0,costeVendido:0,ultimaEntrada:'',tsUltima:0};
+  });
+
   movs.forEach(function(m){
-    if(!map[m.color])map[m.color]={color:m.color,stock:0,entradas:0,costoTotal:0,salidas:0,costeVendido:0,ultimaEntrada:''};
-    const it=map[m.color];
+    if(!colores[m.color])colores[m.color]={color:m.color,stock:0,entradas:0,costoTotal:0,salidas:0,costeVendido:0,ultimaEntrada:'',tsUltima:0,tallas:{}};
+    const c=colores[m.color];
+    const k=m.color+'|'+(m.talla||'');
+    if(!tallas[k])tallas[k]={color:m.color,talla:m.talla||'',stock:0,entradas:0,costoTotal:0,salidas:0,costeVendido:0,ultimaEntrada:'',tsUltima:0};
+    const it=tallas[k];
     if(m.tipo==='PEDIDO'){
-      it.stock-=m.cantidad;
-      it.salidas+=m.cantidad;
-      it.costeVendido+=m.total;
+      c.stock-=m.cantidad;c.salidas+=m.cantidad;c.costeVendido+=m.total;
+      it.stock-=m.cantidad;it.salidas+=m.cantidad;it.costeVendido+=m.total;
     }else{
-      it.stock+=m.cantidad;
-      it.entradas+=m.cantidad;
-      it.costoTotal+=m.costoUnitario*m.cantidad;
+      c.stock+=m.cantidad;c.entradas+=m.cantidad;c.costoTotal+=m.costoUnitario*m.cantidad;
+      it.stock+=m.cantidad;it.entradas+=m.cantidad;it.costoTotal+=m.costoUnitario*m.cantidad;
+      if(!c.ultimaEntrada||m.ts>c.tsUltima){c.ultimaEntrada=m.fecha;c.tsUltima=m.ts}
       if(!it.ultimaEntrada||m.ts>it.tsUltima){it.ultimaEntrada=m.fecha;it.tsUltima=m.ts}
     }
   });
-  return map;
+
+  COLORES.forEach(function(color){
+    const c=colores[color];
+    TALLAS.forEach(function(talla){
+      const it=tallas[color+'|'+talla];
+      c.tallas[talla]=it.stock;
+    });
+  });
+  return {tallas:tallas,colores:colores};
 }
 
 /* ============================ GASTOS ============================ */
@@ -214,6 +274,36 @@ function borrarGasto_(raw){
   return json_({ok:true});
 }
 
+/* =========================== FACTURAS =========================== */
+
+function guardarFactura_(raw){
+  const ref=String(raw.referencia||'').trim();
+  if(!ref)throw new Error('Falta la referencia del pedido');
+  const sheet=getSheet_(SHEET_FACTURAS);
+  ensureHeaders_(sheet,HEADERS_FAC);
+  const last=sheet.getLastRow();
+  let consecutivo=1;
+  for(let i=2;i<=last;i++){
+    const num=String(sheet.getRange(i,1).getValue()||'');
+    const m=/(\d+)\s*$/.exec(num);
+    if(m)consecutivo=Math.max(consecutivo,Number(m[1])+1);
+  }
+  const numero='LB-'+('000'+consecutivo).slice(-4);
+  const estado=ESTADOS_FACTURA.indexOf(String(raw.estado||'').toLowerCase())>=0?String(raw.estado).toLowerCase():'pendiente';
+  sheet.appendRow([numero,new Date(),ref,raw.clienta||'',raw.celular||'',raw.ciudad||'',raw.detalle||'',Number(raw.total)||0,estado,raw.notas||'']);
+  return json_({ok:true,numero:numero});
+}
+
+function borrarFactura_(raw){
+  const fila=Number(raw.fila)||0;
+  const sheet=getSheet_(SHEET_FACTURAS);
+  if(fila<2||fila>sheet.getLastRow())throw new Error('Fila inválida');
+  sheet.deleteRow(fila);
+  return json_({ok:true});
+}
+
+/* ========================== PEDIDOS ========================== */
+
 function cambiarEstado_(raw){
   const referencia=String(raw.referencia||'').trim();
   const estado=String(raw.estado||'').trim();
@@ -234,23 +324,44 @@ function cambiarEstado_(raw){
 /* ========================== DASHBOARD ========================== */
 
 function dashboard_(){
-  const movs=leerMovimientos_();
   const state=estadoInventario_();
-  const colors=Object.keys(state);
-  const inventario=colors.map(function(color){
-    const it=state[color];
-    const promedio=it.entradas>0?it.costoTotal/it.entradas:0;
-    const alerta=it.stock<0?'negativo':(it.stock===0?'agotado':(it.stock<=3?'bajo':''));
-    return {color:color,stock:it.stock,entradas:it.entradas,salidas:it.salidas,
-      costoUnitario:Math.round(promedio),valor:Math.round(it.stock*promedio),
-      ultimaEntrada:it.ultimaEntrada||'',alerta:alerta};
+  const movs=leerMovimientos_();
+
+  const inventario=[];
+  COLORES.forEach(function(color){
+    const c=state.colores[color];
+    TALLAS.forEach(function(talla){
+      const it=state.tallas[color+'|'+talla];
+      if(!it)return;
+      const prom=it.entradas>0?it.costoTotal/it.entradas:0;
+      inventario.push({color:color,talla:talla,stock:it.stock,entradas:it.entradas,salidas:it.salidas,
+        costoUnitario:Math.round(prom),valor:Math.round(it.stock*prom),
+        ultimaEntrada:it.ultimaEntrada||'',alerta:alerta_(it.stock)});
+    });
+    const libre=state.tallas[color+'|'];
+    if(libre&&(libre.stock||libre.entradas||libre.salidas)){
+      const prom=libre.entradas>0?libre.costoTotal/libre.entradas:0;
+      inventario.push({color:color,talla:'',stock:libre.stock,entradas:libre.entradas,salidas:libre.salidas,
+        costoUnitario:Math.round(prom),valor:Math.round(libre.stock*prom),
+        ultimaEntrada:libre.ultimaEntrada||'',alerta:alerta_(libre.stock)});
+    }
+  });
+
+  const inventarioColor=COLORES.map(function(color){
+    const c=state.colores[color];
+    const prom=c.entradas>0?c.costoTotal/c.entradas:0;
+    return {color:color,stock:c.stock,entradas:c.entradas,salidas:c.salidas,
+      costoUnitario:Math.round(prom),valor:Math.round(c.stock*prom),
+      ultimaEntrada:c.ultimaEntrada||'',alerta:alerta_(c.stock),
+      tallas:c.tallas||{},sinDesglose:(state.tallas[color+'|']||{}).stock||0};
   });
 
   const ventasPorColor={};
   movs.forEach(function(m){
     if(m.tipo!=='PEDIDO')return;
-    if(!ventasPorColor[m.color])ventasPorColor[m.color]={color:m.color,vendidas:0,ingresos:0};
-    ventasPorColor[m.color].vendidas+=m.cantidad;
+    const k=m.color+'|'+(m.talla||'');
+    if(!ventasPorColor[k])ventasPorColor[k]={color:m.color,talla:m.talla||'',vendidas:0};
+    ventasPorColor[k].vendidas+=m.cantidad;
   });
 
   const gastos=leerFilas_(SHEET_GASTOS,HEADERS_GAS).map(function(r,i){
@@ -265,8 +376,9 @@ function dashboard_(){
 
   const pedidos=leerFilas_(SHEET_PEDIDOS,HEADERS).map(function(r){
     return {fecha:fechaTexto_(r[0]),ts:epoch_(r[0]),referencia:r[1]||'',estado:r[2]||'',nombre:r[3]||'',
-      celular:r[5]||'',ciudad:r[7]||'',cantidad:Number(r[11])||0,detalle:r[12]||'',
-      producto:Number(r[13])||0,envio:Number(r[14])||0,pagadoHoy:Number(r[15])||0,formaPago:r[16]||''};
+      cedula:r[4]||'',celular:r[5]||'',correo:r[6]||'',ciudad:r[7]||'',direccion:r[8]||'',barrio:r[9]||'',unidad:r[10]||'',
+      cantidad:Number(r[11])||0,detalle:r[12]||'',producto:Number(r[13])||0,envio:Number(r[14])||0,
+      pagadoHoy:Number(r[15])||0,formaPago:r[16]||'',regalo:r[17]||'',comprobante:r[18]||'',notas:r[19]||''};
   });
 
   let ventas=0,ventasPendientes=0,cobrado=0,cobradoPendiente=0,unidades=0,confirmados=0,pendientes=0;
@@ -286,40 +398,57 @@ function dashboard_(){
   const costoVendido=movs.filter(function(m){return m.tipo==='PEDIDO'}).reduce(function(s,m){return s+m.total},0);
   const compras=movs.filter(function(m){return m.tipo==='COMPRA'||m.tipo==='INICIAL'});
   const invertido=compras.reduce(function(s,m){return s+m.total},0);
-  const valorInventario=inventario.reduce(function(s,i){return s+i.valor},0);
+  const valorInventario=inventarioColor.reduce(function(s,i){return s+i.valor},0);
   const utilidadBruta=ventas-costoVendido;
   const utilidadNeta=utilidadBruta-totalGastos;
+
+  const facturas=leerFilas_(SHEET_FACTURAS,HEADERS_FAC).map(function(r,i){
+    return {fila:i+2,numero:r[0]||'',fecha:fechaTexto_(r[1]),ts:epoch_(r[1]),referencia:r[2]||'',
+      clienta:r[3]||'',celular:r[4]||'',ciudad:r[5]||'',detalle:r[6]||'',
+      total:Number(r[7])||0,estado:r[8]||'pendiente',notas:r[9]||''};
+  });
 
   return {
     ok:true,
     generado:new Date().toISOString(),
     colores:COLORES,
+    tallas:TALLAS,
     categorias:CATEGORIAS_GASTO,
     estados:ESTADOS_PEDIDO,
+    estadosFactura:ESTADOS_FACTURA,
     inventario:inventario,
+    inventarioColor:inventarioColor,
     ventasPorColor:Object.keys(ventasPorColor).map(function(k){return ventasPorColor[k]}),
     movimientos:movs.slice(-200).reverse().map(function(m){
-      return {fila:m.fila,fecha:m.fecha,ts:m.ts,tipo:m.tipo,color:m.color,cantidad:m.cantidad,
+      return {fila:m.fila,fecha:m.fecha,ts:m.ts,tipo:m.tipo,color:m.color,talla:m.talla,cantidad:m.cantidad,
         costoUnitario:m.costoUnitario,total:m.total,detalle:m.detalle,referencia:m.referencia};
     }),
     gastos:gastos.slice(-200).reverse(),
     gastosPorCategoria:gastosPorCategoria,
     compras:compras.map(function(m){
-      return {fila:m.fila,fecha:m.fecha,ts:m.ts,tipo:m.tipo,color:m.color,cantidad:m.cantidad,
+      return {fila:m.fila,fecha:m.fecha,ts:m.ts,tipo:m.tipo,color:m.color,talla:m.talla,cantidad:m.cantidad,
         costoUnitario:m.costoUnitario,total:m.total,detalle:m.detalle};
     }).reverse(),
+    facturas:facturas.reverse(),
     pedidos:pedidos.slice(-80).reverse(),
     totales:{
       ventas:ventas,ventasPendientes:ventasPendientes,cobrado:cobrado,cobradoPendiente:cobradoPendiente,
       unidades:unidades,pedidos:pedidos.length,confirmados:confirmados,pendientes:pendientes,
       costoVendido:Math.round(costoVendido),invertido:Math.round(invertido),totalGastos:Math.round(totalGastos),
       utilidadBruta:Math.round(utilidadBruta),utilidadNeta:Math.round(utilidadNeta),
-      valorInventario:Math.round(valorInventario)
+      valorInventario:Math.round(valorInventario),facturas:facturas.length
     }
   };
 }
 
 /* ============================ UTILES ============================ */
+
+function alerta_(stock){
+  if(stock<0)return 'negativo';
+  if(stock===0)return 'agotado';
+  if(stock<=3)return 'bajo';
+  return '';
+}
 
 function esConfirmado_(estado){
   const n=String(estado||'').toLocaleLowerCase('es-CO').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
@@ -336,19 +465,26 @@ function colorCanonica_(value){
   return found||v;
 }
 
+function tallaCanonica_(value){
+  const v=String(value==null?'':value).trim().toUpperCase();
+  if(!v)return '';
+  const found=TALLAS.filter(function(t){return t===v})[0];
+  return found||v;
+}
+
 function normaliza_(value){
   return String(value||'').toLocaleLowerCase('es-CO').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
 }
 
 function leerMovimientos_(){
   return leerFilas_(SHEET_MOVIMIENTOS,HEADERS_MOV).map(function(r,i){
-    const cantidad=Number(r[3])||0;
-    const costoUnitario=Number(r[4])||0;
-    let total=Number(r[5])||0;
+    const cantidad=Number(r[4])||0;
+    const costoUnitario=Number(r[5])||0;
+    let total=Number(r[6])||0;
     if(!total)total=cantidad*costoUnitario;
     return {fila:i+2,fecha:fechaTexto_(r[0]),ts:epoch_(r[0]),tipo:String(r[1]||'').toUpperCase(),
-      color:colorCanonica_(r[2]),cantidad:cantidad,costoUnitario:costoUnitario,total:total,
-      detalle:r[6]||'',referencia:r[7]||''};
+      color:colorCanonica_(r[2]),talla:tallaCanonica_(r[3]),cantidad:cantidad,costoUnitario:costoUnitario,total:total,
+      detalle:r[7]||'',referencia:r[8]||''};
   });
 }
 

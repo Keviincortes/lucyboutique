@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Factura · Lucy Boutique</title>
+<link rel="icon" href="assets/logo-160.webp" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+:root{
+  --rosa:#E23D80;--rosa-deep:#B02A62;--rosa-lt:#F4A9C7;--rosa-12:rgba(226,61,128,.14);
+  --oro:#D9A93F;--oro-lt:#F3D489;--oro-deep:#9A7420;--oro-12:rgba(217,169,63,.14);
+  --vino:#5A1236;--vino-2:#7A1B47;--vino-12:rgba(90,18,54,.35);
+  --bg:#1E0D1F;--bg2:#160A17;--card:#170D19;--card2:#0F0712;--line:#3B2338;--line2:#54324E;
+  --ink:#F2E7F0;--muted:#A78FA6;--soft:#D9C6D6;--ok:#2FBF71;--warn:#E8A13A;--danger:#E4586B;--wa:#25D366;
+  --sans:'Poppins',system-ui,'Segoe UI',sans-serif;--script:'Pacifico','Brush Script MT',cursive;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(700px 460px at 85% -5%,var(--vino-12),transparent 70%),radial-gradient(640px 480px at -5% 40%,var(--rosa-12),transparent 70%),repeating-linear-gradient(0deg,transparent,transparent 43px,rgba(255,255,255,.028) 43px,rgba(255,255,255,.028) 44px),repeating-linear-gradient(90deg,transparent,transparent 43px,rgba(255,255,255,.028) 43px,rgba(255,255,255,.028) 44px)}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
+h1,h2,h3{font-weight:700}
+.script{font-family:var(--script);font-weight:400}
+[hidden]{display:none!important}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:14px;font-weight:700;font-size:13.5px;transition:.18s;white-space:nowrap}
+.btn-pink{background:linear-gradient(120deg,var(--rosa),var(--rosa-deep));color:#fff;box-shadow:0 5px 18px var(--rosa-20)}
+.btn-wa{background:linear-gradient(135deg,var(--wa),#128C7E);color:#fff}
+.btn-ghost{background:transparent;color:var(--soft);border:1.5px solid var(--line)}
+.btn-ghost:hover{border-color:var(--rosa);color:#fff;background:var(--rosa-12)}
+.btn-gold{background:linear-gradient(135deg,var(--oro-lt),var(--oro) 65%);color:#3A2405}
+.btn:active{transform:scale(.97)}
+
+/* barra de herramientas */
+.bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:11px 18px;background:#160A17ee;backdrop-filter:blur(14px);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.logo-pill{display:flex;align-items:center;gap:9px;padding:6px 16px 6px 9px;border-radius:999px;background:linear-gradient(120deg,var(--vino),var(--vino-2) 70%,#8E2255);border:2px solid var(--oro)}
+.logo-pill img{width:34px;height:34px;border-radius:50%;object-fit:cover}
+.logo-name{font-family:var(--script);font-size:18px;color:#fff;line-height:1}
+.bar-right{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* ajustes */
+.cfg{max-width:794px;margin:20px auto;padding:0 18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.cfg .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px 15px}
+.cfg label{display:block;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.cfg select,.cfg input,.cfg textarea{width:100%;padding:9px 12px;border:1.5px solid var(--line);border-radius:11px;background:var(--card2);color:#fff}
+.cfg select option{background:var(--card2)}
+.cfg .full{grid-column:1/-1}
+
+/* ---------------- INVOICE ---------------- */
+.pdf-stage{position:fixed;left:-10000px;top:0;width:794px;background:#fff;z-index:-1}
+.inv{width:794px;background:#fff;color:#2A1226;font-family:var(--sans);position:relative;overflow:hidden}
+.inv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:34px 44px 26px;background:linear-gradient(120deg,var(--vino) 0%,#3A0E2A 55%,#2A0E22 100%);position:relative;overflow:hidden}
+.inv-top::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 33px,rgba(255,255,255,.04) 33px,rgba(255,255,255,.04) 34px),repepeating-linear-gradient(90deg,transparent,transparent 33px,rgba(255,255,255,.04) 33px,rgba(255,255,255,.04) 34px)}
+.inv-hh{position:absolute;color:var(--rosa-lt);opacity:.35;font-size:12px}
+.inv-logo{position:relative;z-index:1;display:flex;align-items:center;gap:12px;padding:10px 22px 10px 14px;border-radius:999px;background:linear-gradient(120deg,var(--vino),var(--vino-2) 70%,#8E2255);border:2px solid var(--oro)}
+.inv-logo .cr{font-size:24px}
+.inv-logo .nm{font-family:var(--script);font-size:27px;color:#fff;line-height:1}
+.inv-logo .sb{display:block;font-size:7.5px;letter-spacing:.32em;color:var(--oro-lt);margin-top:4px;text-transform:uppercase}
+.inv-logoimg{position:relative;z-index:1;height:74px;border-radius:14px}
+.inv-doc{text-align:right;position:relative;z-index:1}
+.inv-doc-title{font-size:11px;font-weight:800;letter-spacing:.3em;color:var(--rosa-lt)}
+.inv-num{font-size:26px;font-weight:800;color:#fff;margin:2px 0}
+.inv-date{font-size:11px;color:var(--soft)}
+.inv-ref{font-size:9.5px;color:var(--muted);margin-top:3px}
+.inv-estado{display:inline-block;margin-top:8px;padding:3px 12px;border-radius:999px;font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+.inv-estado.e-pendiente{background:rgba(232,161,58,.22);color:#F5CE8E;border:1px solid rgba(232,161,58,.6)}
+.inv-estado.e-pagada{background:rgba(47,191,113,.22);color:#9FE8C4;border:1px solid rgba(47,191,113,.65)}
+.inv-estado.e-anulada{background:rgba(228,88,107,.22);color:#F5A9B4;border:1px solid rgba(228,88,107,.65)}
+.inv-goldline{height:4px;background:linear-gradient(90deg,var(--oro-deep),var(--oro-lt) 30%,var(--oro) 55%,var(--rosa) 100%)}
+.inv-parties{display:grid;grid-template-columns:1.1fr 1.1fr .95fr;gap:22px;padding:24px 44px 18px}
+.inv-lbl{font-size:9px;font-weight:800;letter-spacing:.24em;color:var(--rosa-deep);text-transform:uppercase;margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid #F0D9E4}
+.inv-name{font-size:14.5px;font-weight:700;color:#2A1226;margin-bottom:3px}
+.inv-pl{font-size:11.5px;color:#6B4E66;line-height:1.55}
+.inv-ghost{color:#C9A9C2;font-style:italic;font-weight:400}
+.inv-met{font-size:13px;font-weight:800;color:var(--rosa-deep)}
+.inv-metsub{font-size:10px;color:#8A6B85;margin-top:3px}
+.inv-table{width:calc(100% - 88px);margin:4px 44px 0;border-collapse:collapse}
+.inv-table th{background:linear-gradient(120deg,var(--vino),var(--vino-2));color:#fff;font-size:8.5px;font-weight:800;letter-spacing:.2em;padding:10px 12px;text-align:left}
+.inv-table th.tc,.inv-table td.tc{text-align:center}
+.inv-table th.tr,.inv-table td.tr{text-align:right}
+.inv-table td{padding:11px 12px;border-bottom:1px solid #F0D9E4;font-size:12px;vertical-align:top}
+.inv-table tr.inv-row:nth-child(even) td{background:#FDF1F6}
+.inv-table tr{break-inside:avoid;page-break-inside:avoid}
+.li-name{font-weight:700;color:#2A1226;font-size:12.5px}
+.li-det{font-size:10px;color:#8A6B85;margin-top:2px}
+.li-vars{margin-top:5px;display:flex;gap:8px;flex-wrap:wrap}
+.v-color{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#6B4E66}
+.v-color i{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.25);display:inline-block}
+.v-talla{font-size:9px;font-weight:800;padding:1px 8px;border:1px solid #F0D9E4;border-radius:6px;color:var(--rosa-deep);background:var(--rosa-12)}
+.inv-table .tb{font-weight:800;color:#2A1226}
+.inv-empty{text-align:center;color:#C9A9C2;font-style:italic;padding:26px 12px!important}
+.inv-bottom{display:grid;grid-template-columns:1.15fr .85fr;gap:26px;padding:22px 44px 10px;align-items:start}
+.inv-paybox{border:1.5px solid #F0D9E4;border-radius:14px;padding:14px 16px;background:#FDF1F6;break-inside:avoid}
+.inv-paybox p{font-size:11px;color:#6B4E66;line-height:1.6;margin-bottom:4px}
+.inv-paybox p b{color:#2A1226}
+.inv-gift{margin-top:8px;padding:8px 12px;border-radius:10px;background:var(--rosa-12);border:1px dashed var(--rosa);color:var(--rosa-deep);font-size:11px;font-weight:700}
+.inv-nogift{margin-top:6px;font-size:9.5px;color:#8A6B85}
+.inv-notes{margin-top:12px;border-left:3px solid var(--oro);padding:6px 12px;background:var(--oro-12);font-size:10.5px;color:#6B4E66}
+.inv-barcode{margin-top:16px;line-height:0}
+.inv-barcode span{display:inline-block;height:26px;background:var(--vino);margin-right:2px}
+.inv-barcode small{display:block;line-height:1.4;font-size:8px;letter-spacing:.28em;color:#8A6B85;margin-top:4px}
+.inv-totals{break-inside:avoid}
+.it-row{display:flex;justify-content:space-between;font-size:12px;color:#6B4E66;padding:6px 2px}
+.it-row b{color:#2A1226}
+.it-total{border-top:2px solid var(--vino);margin-top:5px;padding-top:10px;font-size:13.5px;font-weight:800;color:#2A1226}
+.inv-hoy{margin-top:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;border-radius:14px;background:linear-gradient(120deg,var(--rosa-deep),var(--rosa) 60%,#F0568F)}
+.inv-hoy span{font-size:10px;font-weight:800;letter-spacing:.26em;color:#fff}
+.inv-hoy strong{font-size:25px;font-weight:800;color:#fff;white-space:nowrap}
+.inv-saldo{margin-top:8px;text-align:right;font-size:11px;color:var(--rosa-deep)}
+.inv-foot{margin-top:auto;padding:20px 44px 24px;background:linear-gradient(120deg,var(--vino),#3A0E2A 60%,#2A0E22);text-align:center}
+.inv-thanks{font-family:var(--script);font-size:20px;color:var(--rosa-lt);margin-bottom:8px}
+.inv-contact{font-size:10px;color:var(--soft)}
+.inv-contact b{color:var(--oro-lt)}
+.inv-policy{font-size:8px;color:var(--muted);margin-top:8px;line-height:1.6}
+.inv-tiny{font-size:8px;color:#7C6478;margin-top:6px}
+.inv-stamp{position:absolute;top:46%;left:50%;transform:translate(-50%,-50%) rotate(-16deg);font-size:62px;font-weight:800;letter-spacing:.18em;padding:8px 34px;border:6px double currentColor;border-radius:14px;opacity:.1;pointer-events:none;white-space:nowrap;z-index:2}
+.inv-stamp.ok{color:var(--ok)}.inv-stamp.bad{color:var(--danger)}
+
+/* pantalla */
+.wrap{max-width:830px;margin:0 auto;padding:18px 16px 60px;position:relative;z-index:1}
+.preview{background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 26px 70px #0009;margin:14px auto;max-width:794px}
+.hintbar{max-width:794px;margin:0 auto;padding:10px 14px;background:#ffffff0d;border:1px dashed var(--line2);border-radius:12px;font-size:12.5px;color:var(--soft)}
+.hintbar b{color:var(--rosa-lt)}
+.pick{max-width:794px;margin:20px auto}
+.pick-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:8px;cursor:pointer;transition:.15s}
+.pick-row:hover{border-color:var(--rosa);background:var(--rosa-12)}
+.pick-row b{font-size:13.5px}
+.pick-row small{display:block;color:var(--muted);font-size:11px}
+.pick-row .amt{margin-left:auto;font-weight:800;color:var(--rosa-lt);white-space:nowrap}
+.login{max-width:420px;margin:60px auto;background:var(--card);border:1px solid var(--line2);border-radius:24px;padding:28px 24px;text-align:center}
+.login img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--oro)}
+.login h1{font-family:var(--script);font-size:26px;color:var(--rosa-lt);margin:12px 0 4px}
+.login p{color:var(--muted);font-size:13px;margin-bottom:18px}
+.login input{width:100%;padding:13px;border-radius:12px;border:1.5px solid var(--line);background:var(--card2);color:#fff;text-align:center;letter-spacing:.2em}
+#err{color:var(--danger);font-size:12.5px;font-weight:700;margin-top:10px;min-height:1em}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,150%);z-index:60;background:#1c1622;border:1px solid var(--line);border-left:4px solid var(--rosa);padding:13px 18px;border-radius:14px;box-shadow:0 18px 40px #000b;font-weight:700;max-width:min(460px,92vw);transition:transform .3s cubic-bezier(.2,.9,.3,1.2)}
+#toast.show{transform:translate(-50%,0)}
+#toast.err{border-left-color:var(--danger)}
+#toast.ok{border-left-color:var(--ok)}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(max-width:860px){.cfg{grid-template-columns:1fr}.pdf-stage{transform:scale(.52);transform-origin:top left;left:0;top:0}}
+@media print{
+  body::before,.bar,.cfg,.hintbar,#toast,.pick{display:none!important}
+  body{background:#fff}
+  .wrap{padding:0;max-width:none}
+  .preview{box-shadow:none;margin:0;max-width:none}
+  .inv{width:100%}
+  @page{size:A4;margin:0}
+}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="logo-pill">
+    <img src="assets/logo-160.webp" alt="Lucy Boutique">
+    <span class="logo-name">Lucy Boutique</span>
+  </div>
+  <div class="bar-right">
+    <button class="btn btn-ghost" id="btnReload" type="button">↻ Actualizar</button>
+    <button class="btn btn-ghost" id="btnPrint" type="button">🖨 Imprimir</button>
+    <button class="btn btn-gold" id="btnPdf" type="button">⬇ Descargar PDF</button>
+    <button class="btn btn-wa" id="btnWa" type="button">💬 Enviar por WhatsApp</button>
+  </div>
+</div>
+
+<div id="login" class="login" hidden>
+  <img src="assets/logo-160.webp" alt="Lucy Boutique">
+  <h1>Lucy Boutique</h1>
+  <p>Escribe la clave de administración para facturar</p>
+  <input id="pass" type="password" placeholder="••••••••">
+  <div id="err"></div>
+  <button class="btn btn-pink" id="btnLogin" type="button" style="width:100%;margin-top:14px">Entrar</button>
+</div>
+
+<div id="pick" class="pick" hidden></div>
+
+<div class="wrap" id="app" hidden>
+  <div class="cfg">
+    <div class="card">
+      <label for="canal">Canal de pago</label>
+      <select id="canal">
+        <option value="nequi">Nequi</option>
+        <option value="daviplata">DaviPlata</option>
+        <option value="bancolombia">Bancolombia</option>
+        <option value="transferencia">Transferencia</option>
+      </select>
+    </div>
+    <div class="card">
+      <label for="estado">Estado de la factura</label>
+      <select id="estado">
+        <option value="pendiente">Pendiente</option>
+        <option value="pagada">Pagada</option>
+        <option value="anulada">Anulada</option>
+      </select>
+    </div>
+    <div class="card">
+      <label for="numero">Número de factura</label>
+      <input id="numero" placeholder="Se asigna al guardar" readonly>
+    </div>
+    <div class="card full">
+      <label for="notas">Notas para la clienta (opcional)</label>
+      <input id="notas" placeholder="Ej. Entrega en la tarde, barrio centro…">
+    </div>
+  </div>
+
+  <div class="hintbar" id="hint"></div>
+
+  <div class="preview" id="preview"></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="assets/html2pdf.bundle.min.js"></script>
+<script>
+(function(){
+  'use strict';
+  var $=function(s){return document.querySelector(s)};
+  var KEY=sessionStorage.getItem('lucy_panel_key')||'';
+  var SETTINGS={
+    whatsapp:'573232345446', nequi:'323 234 5446', daviplata:'323 234 5446',
+    web:'lucyboutique.vercel.app', prefijo:'LB',
+    envioBogota:10000, envioNacional:22900,
+    regaloTexto:'Regalo sorpresa de Lucy Boutique 🎁',
+    pie:'Tu look más cómodo, más tú.'
+  };
+  var CANALES={nequi:'Nequi',daviplata:'DaviPlata',bancolombia:'Bancolombia',transferencia:'Transferencia'};
+  var COLORES={'rosa':'#F4A7C3','negro':'#26222A','blanco':'#FFFFFF','gris':'#9AA0A6','café':'#6B4226','cafe':'#6B4226','chocolate':'#3E2723'};
+  var METODOS={
+    anticipado:{label:'Pago anticipado',icon:'💳',desc:'Producto + envío hoy · incluye regalo 🎁'},
+    contraentrega:{label:'Contra entrega',icon:'🚚',desc:'Hoy solo el envío · el conjunto al recibir'}
+  };
+  var DATA=null, INVOICE=null, CURRENT=null;
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function fmt(n){return '$'+Number(n||0).toLocaleString('es-CO',{maximumFractionDigits:0})}
+  function fTel(v){var s=String(v||'').replace(/\D/g,'');return s.length?('+57 '+s.slice(-10,-8)+' '+s.slice(-8,-4)+' '+s.slice(-4)):'—'}
+  function fFechaL(v){
+    if(!v)return '';
+    var s=String(v).trim();
+    var mes=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    var iso=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+    if(iso)return Number(iso[3])+' de '+mes[Number(iso[2])-1]+' de '+iso[1];
+    var dmy=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);
+    if(dmy)return Number(dmy[1])+' de '+mes[Number(dmy[2])-1]+' de '+dmy[3];
+    return s;
+  }
+  function norm(v){return String(v||'').toLocaleLowerCase('es-CO').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
+  function toast(msg,kind){
+    var t=$('#toast');t.textContent=msg;t.className='show '+(kind||'');
+    clearTimeout(t._t);t._t=setTimeout(function(){t.className=''},3800);
+  }
+  function colorDot(c){
+    var k=norm(c);
+    return COLORES[k]||'#c9a9c2';
+  }
+
+  /* ---------------- datos ---------------- */
+  function api(){
+    return fetch('/api/panel',{headers:{'x-panel-key':KEY}}).then(function(r){
+      return r.json().then(function(j){
+        if(!r.ok||j.ok===false)throw new Error(j.error||('Error '+r.status));
+        return j;
+      });
+    });
+  }
+
+  function parseItems(order){
+    var out=[];
+    var det=String(order.detalle||'');
+    det.split('||').forEach(function(chunk){
+      var color=/Color:\s*([^|]+)/.exec(chunk);
+      var talla=/Talla:\s*([^|]+)/.exec(chunk);
+      if(color){
+        out.push({nombre:'Conjunto Poly Like',detalle:'Chaqueta con capota y pantalón de pierna amplia',
+          color:color[1].trim(),talla:talla?talla[1].trim():'',qty:1,price:69900});
+      }
+    });
+    if(!out.length){
+      for(var i=0;i<(order.cantidad||1);i++)out.push({nombre:'Conjunto Poly Like',detalle:'Chaqueta con capota y pantalón de pierna amplia',color:'',talla:'',qty:1,price:69900});
+    }
+    if(out.length>1)out.push({nombre:'Promo 2 conjuntos',detalle:'Ahorras $9.900 · incluye regalo sorpresa 🎁',color:'',talla:'',qty:1,price:-9900});
+    return out;
+  }
+
+  function buildInvoice(order,extra){
+    var items=parseItems(order);
+    var sub=items.reduce(function(s,it){return s+(it.qty*it.price)},0);
+    var envio=Number(order.envio)||0;
+    var total=sub+envio;
+    var hoy=Number(order.pagadoHoy)||0;
+    var metodo=/contra/i.test(order.formaPago||'')?'contraentrega':'anticipado';
+    var canal=extra.canal||'nequi';
+    var estado=extra.estado||'pendiente';
+    var numero=extra.numero||'';
+    var notas=extra.notas||'';
+    var cl=CANALES[canal]||'Nequi';
+    var num=settings_numero(canal);
+    var m=METODOS[metodo];
+    var util = function(v){
+      var s=String(v||'').trim();
+      if(!s)return '';
+      if(/^no (indicado|informado|dado)$/i.test(s))return '';
+      return s;
+    };
+    var client={
+      nombre:util(order.nombre), cedula:util(order.cedula), celular:util(order.celular),
+      ciudad:util(order.ciudad), barrio:util(order.barrio), direccion:util(order.direccion),
+      extra:[util(order.unidad),util(order.correo)].filter(Boolean).join(' · ')
+    };
+    var pay='';
+    if(metodo==='anticipado'){
+      pay='<p>💳 Transfiere <b>'+fmt(hoy)+'</b> por '+cl+(num?': <b>'+esc(num)+'</b>':'')+' a Lucy Boutique.</p>'
+        +'<p>📸 Envía el comprobante por WhatsApp <b>'+fTel(SETTINGS.whatsapp)+'</b>.</p>'
+        +'<p>🚀 Despachamos en <b>menos de 24 h</b> tras confirmar el pago.</p>';
+    }else{
+      pay='<p>🚚 Hoy pagas <b>solo el envío</b> ('+fmt(envio)+') por '+cl+(num?': <b>'+esc(num)+'</b>':'')+'.</p>'
+        +'<p>El conjunto (<b>'+fmt(sub)+'</b>) se paga al recibir. 📸 Comprobante al <b>'+fTel(SETTINGS.whatsapp)+'</b>.</p>'
+        +'<p>📦 Bogotá: menos de 24 h · Nacional: 1 a 5 días hábiles.</p>';
+    }
+    if(metodo==='anticipado')pay+='<div class="inv-gift">🎁 '+esc(SETTINGS.regaloTexto)+'</div>';
+    else pay+='<div class="inv-nogift">Este pedido no incluye regalo sorpresa.</div>';
+    return {numero:numero,ref:order.referencia,fecha:order.fecha,estado:estado,
+      clienta:client,items:items,envio:envio,metodo:metodo,canal:canal,regalo:metodo==='anticipado',
+      notas:notas,tot:{sub:sub,envio:envio,total:total,hoy:hoy,saldo:total-hoy}};
+  }
+
+  function settings_numero(canal){
+    if(canal==='daviplata')return SETTINGS.daviplata;
+    if(canal==='nequi')return SETTINGS.nequi;
+    if(canal==='bancolombia')return SETTINGS.bancolombia||'';
+    return '';
+  }
+
+  function invoiceHTML(inv){
+    var m=METODOS[inv.metodo]||METODOS.anticipado, c=inv.clienta||{}, canal=inv.canal||'nequi';
+    var cl=CANALES[canal]||'Nequi';
+    var num=settings_numero(canal);
+    var ghost=function(v,ph){return v?esc(v):'<span class="inv-ghost">'+ph+'</span>'};
+    var rows=(inv.items||[]).map(function(it,i){
+      return '<tr class="inv-row"><td class="tc">'+(i+1)+'</td>'
+        +'<td><div class="li-name">'+esc(it.nombre)+'</div>'
+        +(it.detalle?'<div class="li-det">'+esc(it.detalle)+'</div>':'')
+        +((it.color||it.talla)?'<div class="li-vars">'
+          +(it.color?'<span class="v-color"><i style="background:'+colorDot(it.color)+'"></i>'+esc(it.color)+'</span>':'')
+          +(it.talla?'<span class="v-talla">Talla '+esc(it.talla)+'</span>':'')
+          +'</div>':'')
+        +'</td><td class="tc">'+it.qty+'</td><td class="tr">'+fmt(it.price)+'</td>'
+        +'<td class="tr tb">'+fmt(it.qty*it.price)+'</td></tr>';
+    }).join('')||'<tr><td colspan="5" class="inv-empty">Sin productos</td></tr>';
+
+    var pay='';
+    if(inv.metodo==='anticipado'){
+      pay='<p>💳 Transfiere <b>'+fmt(inv.tot.hoy)+'</b> por '+cl+(num?': <b>'+esc(num)+'</b>':'')+' a Lucy Boutique.</p>'
+        +'<p>📸 Envía el comprobante por WhatsApp <b>'+fTel(SETTINGS.whatsapp)+'</b>.</p>'
+        +'<p>🚀 Despachamos en <b>menos de 24 h</b> tras confirmar el pago.</p>';
+    }else{
+      pay='<p>🚚 Hoy pagas <b>solo el envío</b> ('+fmt(inv.tot.envio)+') por '+cl+(num?': <b>'+esc(num)+'</b>':'')+'.</p>'
+        +'<p>El conjunto (<b>'+fmt(inv.tot.sub)+'</b>) se paga al recibir. 📸 Comprobante al <b>'+fTel(SETTINGS.whatsapp)+'</b>.</p>'
+        +'<p>📦 Bogotá: menos de 24 h · Nacional: 1 a 5 días hábiles.</p>';
+    }
+    if(inv.regalo)pay+='<div class="inv-gift">🎁 '+esc(SETTINGS.regaloTexto)+'</div>';
+    else pay+='<div class="inv-nogift">Este pedido no incluye regalo sorpresa.</div>';
+
+    var bc=inv.ref||inv.numero||'LUCY', bars='';
+    for(var i=0;i<28;i++)bars+='<span style="width:'+(1+((bc.charCodeAt(i%bc.length)+i*7)%3))+'px"></span>';
+    var contact='<b>WhatsApp</b> '+fTel(SETTINGS.whatsapp)+' &nbsp;·&nbsp; <b>Nequi / DaviPlata</b> '+esc(SETTINGS.nequi)+' &nbsp;·&nbsp; <b>'+esc(SETTINGS.web)+'</b>';
+    var stamp=inv.estado==='pagada'?'<div class="inv-stamp ok">PAGADA</div>':(inv.estado==='anulada'?'<div class="inv-stamp bad">ANULADA</div>':'');
+    var addr=[c.direccion,c.extra].filter(Boolean).map(esc).join(' · ');
+    var logo='<div class="inv-logo"><span class="cr">💗</span><div><span class="nm">Lucy Boutique</span><span class="sb">Moda Femenina · Colombia</span></div></div>';
+
+    return '<div class="inv">'+stamp
+      +'<div class="inv-top"><span class="inv-hh" style="top:14px;left:46%">♥</span><span class="inv-hh" style="bottom:12px;left:38%;font-size:9px">♥</span>'
+      +logo
+      +'<div class="inv-doc"><div class="inv-doc-title">FACTURA DE VENTA</div>'
+      +'<div class="inv-num">N° '+esc(inv.numero||'—')+'</div>'
+      +'<div class="inv-date">'+fFechaL(inv.fecha)+'</div>'
+      +(inv.ref?'<div class="inv-ref">Pedido: '+esc(inv.ref)+'</div>':'')
+      +'<span class="inv-estado e-'+esc(inv.estado||'pendiente')+'">'+({pendiente:'Pendiente',pagada:'Pagada',anulada:'Anulada'}[inv.estado||'pendiente'])+'</span>'
+      +'</div></div>'
+      +'<div class="inv-goldline"></div>'
+      +'<div class="inv-parties">'
+      +'<div><div class="inv-lbl">Datos de la clienta</div><div class="inv-name">'+ghost(c.nombre,'Nombre de la clienta')+'</div>'
+      +(c.cedula?'<div class="inv-pl">C.C. '+esc(c.cedula)+'</div>':'')
+      +(c.celular?'<div class="inv-pl">📱 '+esc(c.celular)+'</div>':'')
+      +'</div>'
+      +'<div><div class="inv-lbl">Datos de entrega</div><div class="inv-name">'+ghost([c.ciudad,c.barrio].filter(Boolean).join(' · '),'Ciudad · Barrio')+'</div>'
+      +(addr?'<div class="inv-pl">'+addr+'</div>':'')+'</div>'
+      +'<div><div class="inv-lbl">Forma de pago</div><div class="inv-met">'+m.icon+' '+m.label+'</div>'
+      +'<div class="inv-metsub">'+m.desc+'<br>Canal: '+cl+'</div></div>'
+      +'</div>'
+      +'<table class="inv-table"><thead><tr><th class="tc">#</th><th>DESCRIPCIÓN</th><th class="tc">CANT</th><th class="tr">V. UNIT</th><th class="tr">IMPORTE</th></tr></thead><tbody>'+rows+'</tbody></table>'
+      +'<div class="inv-bottom"><div>'
+      +'<div class="inv-paybox"><div class="inv-lbl">Instrucciones de pago</div>'+pay+'</div>'
+      +(inv.notas?'<div class="inv-notes"><b>Notas:</b> '+esc(inv.notas)+'</div>':'')
+      +'<div class="inv-barcode">'+bars+'<small>'+esc(bc)+'</small></div></div>'
+      +'<div class="inv-totals">'
+      +'<div class="it-row"><span>Subtotal productos</span><b>'+fmt(inv.tot.sub)+'</b></div>'
+      +'<div class="it-row"><span>Envío</span><b>'+fmt(inv.tot.envio)+'</b></div>'
+      +'<div class="it-row it-total"><span>TOTAL PEDIDO</span><span>'+fmt(inv.tot.total)+'</span></div>'
+      +'<div class="inv-hoy"><span>PAGA HOY</span><strong>'+fmt(inv.tot.hoy)+'</strong></div>'
+      +(inv.tot.saldo>0?'<div class="inv-saldo">Saldo contra entrega: <b>'+fmt(inv.tot.saldo)+'</b></div>':'')
+      +'</div></div>'
+      +'<div class="inv-foot"><div class="inv-thanks">'+esc(SETTINGS.pie)+' 💗</div>'
+      +'<div class="inv-contact">'+contact+'</div>'
+      +'<div class="inv-policy">Cambios por talla o color: 5 días hábiles · prenda sin uso y con etiqueta · Bogotá en la misma visita · Nacional el envío del cambio corre por cuenta de la clienta · defecto de fábrica lo asumimos · no hay devoluciones de dinero.</div>'
+      +'<div class="inv-tiny">Lucy Boutique · Facturador Premium · '+new Date().toLocaleString('es-CO')+'</div>'
+      +'</div></div>';
+  }
+
+  /* ---------------- flujo ---------------- */
+  function render(){
+    if(!CURRENT)return;
+    var extra={canal:$('#canal').value,estado:$('#estado').value,numero:$('#numero').value,notas:$('#notas').value};
+    INVOICE=buildInvoice(CURRENT,extra);
+    $('#preview').innerHTML=invoiceHTML(INVOICE);
+    $('#hint').innerHTML='Factura del pedido <b>'+esc(CURRENT.referencia)+'</b> · total <b>'+fmt(INVOICE.tot.total)+'</b> · paga hoy <b>'+fmt(INVOICE.tot.hoy)+'</b>. '
+      +'Pulsa <b>Descargar PDF</b> para guardarla y <b>Enviar por WhatsApp</b> para mandarla a la clienta.';
+  }
+
+  function guardar(){
+    var extra={canal:$('#canal').value,estado:$('#estado').value,notas:$('#notas').value};
+    return fetch('/api/panel',{method:'POST',headers:{'Content-Type':'application/json','x-panel-key':KEY},
+      body:JSON.stringify({action:'save_invoice',referencia:CURRENT.referencia,clienta:CURRENT.nombre,
+        celular:CURRENT.celular,ciudad:CURRENT.ciudad,
+        detalle:(INVOICE.items||[]).map(function(it){return it.nombre+(it.color?' '+it.color:'')+(it.talla?' T'+it.talla:'')}).join(' · '),
+        total:INVOICE.tot.total,estado:extra.estado,notas:extra.notas})})
+      .then(function(r){return r.json().then(function(j){
+        if(!r.ok||j.ok===false)throw new Error(j.error||'No se pudo guardar');
+        return j;
+      })});
+  }
+
+  function descargarPDF(){
+    var stage=document.createElement('div');
+    stage.className='pdf-stage';
+    stage.innerHTML=invoiceHTML(INVOICE);
+    document.body.appendChild(stage);
+    if(typeof html2pdf==='undefined'){
+      toast('No se pudo cargar el generador de PDF: usa Imprimir y elige "Guardar como PDF".','err');
+      document.body.removeChild(stage);
+      return;
+    }
+    toast('Generando PDF…','ok');
+    html2pdf().set({
+      margin:[0,0,0,0],
+      filename:'Factura-'+(INVOICE.numero||INVOICE.ref||'Lucy')+'.pdf',
+      image:{type:'jpeg',quality:.98},
+      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy']}
+    }).from(stage).save().then(function(){
+      document.body.removeChild(stage);
+      toast('PDF descargado','ok');
+    }).catch(function(e){
+      document.body.removeChild(stage);
+      toast('No se pudo generar el PDF: '+e.message,'err');
+    });
+  }
+
+  function waMessage(){
+    var i=INVOICE;
+    var lines=['Hola '+i.clienta.nombre+' 💗','Gracias por tu compra en Lucy Boutique.','Pedido: '+i.ref,'Factura: '+(i.numero||'pendiente')];
+    (i.items||[]).forEach(function(it){
+      lines.push('• '+it.nombre+(it.color?' '+it.color:'')+(it.talla?' talla '+it.talla:'')+' — '+fmt(it.price));
+    });
+    lines.push('Envío: '+fmt(i.tot.envio));
+    lines.push('Total: '+fmt(i.tot.total));
+    lines.push('Pagas hoy: '+fmt(i.tot.hoy));
+    if(i.tot.saldo>0)lines.push('Saldo contra entrega: '+fmt(i.tot.saldo));
+    lines.push('Aquí va la factura 👇');
+    return lines.join('\n');
+  }
+
+  function enviarWa(){
+    var tel=String(CURRENT.celular||'').replace(/\D/g,'');
+    if(tel.length===10)tel='57'+tel;
+    var texto=encodeURIComponent(waMessage());
+    window.open('https://wa.me/'+(tel||SETTINGS.whatsapp)+'?text='+texto,'_blank');
+  }
+
+  /* ---------------- arranque ---------------- */
+  function pickOrder(ref){
+    var orders=(DATA&&DATA.pedidos)||[];
+    var found=null;
+    orders.forEach(function(o){if(o.referencia===ref)found=o});
+    if(!found){
+      var pick=$('#pick');
+      pick.hidden=false;
+      $('#app').hidden=true;
+      pick.innerHTML='<div class="hintbar">Elige el pedido que quieres facturar:</div>'+
+        orders.map(function(o){
+          return '<div class="pick-row" data-ref="'+esc(o.referencia)+'"><div><b>'+esc(o.nombre||'Sin nombre')+'</b>'
+            +'<small>'+esc(o.referencia)+' · '+esc(o.fecha)+' · '+esc(o.ciudad||'')+' · '+o.cantidad+' set(s)</small></div>'
+            +'<div class="amt">'+fmt(o.producto+o.envio)+'</div></div>';
+        }).join('')||'<div class="hintbar">No hay pedidos para facturar</div>';
+      pick.querySelectorAll('.pick-row').forEach(function(el){
+        el.addEventListener('click',function(){ CURRENT=null; cargar(el.getAttribute('data-ref')); });
+      });
+      return;
+    }
+    CURRENT=found;
+    $('#pick').hidden=true;
+    $('#app').hidden=false;
+    $('#canal').value='nequi';
+    $('#estado').value='pendiente';
+    $('#notas').value='';
+    $('#numero').value='';
+    var ya=(DATA.facturas||[]).filter(function(f){return f.referencia===found.referencia})[0];
+    if(ya)$('#numero').value=ya.numero;
+    render();
+  }
+
+  function cargar(ref){
+    return api().then(function(d){
+      DATA=d;
+      pickOrder(ref||(location.search.match(/ref=([^&]+)/)||[])[1]||'');
+    }).catch(function(e){
+      if(/401|Clave/i.test(e.message)){
+        $('#login').hidden=false;
+        $('#err').textContent=e.message;
+      }else{
+        toast(e.message,'err');
+      }
+    });
+  }
+
+  $('#btnPdf').addEventListener('click',function(){
+    if(!INVOICE)return;
+    var btn=this;btn.disabled=true;btn.innerHTML='<span class="spin"></span> Generando';
+    var finish=function(){btn.disabled=false;btn.innerHTML='⬇ Descargar PDF'};
+    // Si la factura ya tiene numero no se vuelve a guardar (no se duplica).
+    if($('#numero').value){
+      descargarPDF().then(finish).catch(finish);
+      return;
+    }
+    guardar().then(function(j){
+      $('#numero').value=j.numero;
+      render();
+      descargarPDF().then(finish).catch(finish);
+    }).catch(function(e){
+      toast(e.message+' · Se descargara sin numero guardado.','err');
+      descargarPDF().then(finish).catch(finish);
+    });
+  });
+
+  $('#btnWa').addEventListener('click',function(){
+    if(!INVOICE)return;
+    if(!$('#numero').value){
+      guardar().then(function(j){$('#numero').value=j.numero;render();enviarWa();}).catch(function(e){toast(e.message,'err');enviarWa()});
+    }else enviarWa();
+  });
+
+  $('#btnPrint').addEventListener('click',function(){window.print()});
+  $('#btnReload').addEventListener('click',function(){cargar((location.search.match(/ref=([^&]+)/)||[])[1]||'')});
+  ['#canal','#estado','#notas'].forEach(function(s){$(s).addEventListener('change',render)});
+
+  $('#btnLogin').addEventListener('click',function(){
+    var v=$('#pass').value;
+    $('#err').textContent='';
+    KEY=v;
+    api().then(function(){
+      sessionStorage.setItem('lucy_panel_key',v);
+      $('#login').hidden=true;
+      cargar();
+    }).catch(function(e){KEY='';$('#err').textContent=e.message});
+  });
+
+  if(KEY){
+    api().then(function(){cargar()}).catch(function(e){
+      if(/401|Clave/i.test(e.message)){$('#login').hidden=false;$('#err').textContent=e.message}
+      else toast(e.message,'err');
+    });
+  }else{
+    $('#login').hidden=false;
+  }
+})();
+</script>
+</body>
+</html>

@@ -10,7 +10,7 @@ La landing calcula el pedido, intenta registrarlo en Google Sheets y abre WhatsA
 
 Para registrar pedidos automáticamente, el sitio necesita el Web App gratuito de Google Apps Script. No es seguro ni correcto poner secretos de Google o WhatsApp en `index.html`.
 
-## Panel de administración (inventario, compras, gastos)
+## Panel de administración (inventario, compras, gastos, facturas)
 
 **URL: https://lucyboutique.vercel.app/panel**
 **Clave: `LucyBoutique2026`**
@@ -18,25 +18,40 @@ Para registrar pedidos automáticamente, el sitio necesita el Web App gratuito d
 Ahí se maneja todo el negocio:
 
 - **Resumen**: ventas confirmadas, por cobrar, ganancia bruta, ganancia neta, valor del inventario, invertido en compras, gastos y cobrado.
-- **Registrar compra**: entra mercadería por color (ej. "compré 2 negras a $32.000") y se suma al stock.
-- **Ajustar inventario**: corrige el conteo real (merma, pérdida) con cantidad positiva o negativa.
+- **Registrar compra**: entra mercadería por color. Si llenas el **desglose por talla** (XS, S, M, L, XL) el stock queda separado por talla; si lo dejas vacío, la entrada queda "sin desglose".
+- **Ajustar inventario**: corrige el conteo real (merma, pérdida) por color y talla.
 - **Registrar gasto**: empaques, pauta publicitaria, transporte y gasolina, impuestos, otros.
-- **Inventario por color**: stock actual, costo promedio, valor en bodega y avisos de stock bajo o agotado.
-- **Pedidos**: se cambia el estado (PENDIENTE COMPROBANTE → PAGADO → ENTREGADO) y el panel recalcula las ganancias al instante.
-- **Compras / Gastos / Movimientos**: historial completo con fechas y valores.
+- **Inventario por color**: total y una ficha por talla (XS, S, M, L, XL) con avisos de stock bajo o agotado.
+- **Pedidos**: se cambia el estado (PENDIENTE COMPROBANTE → PAGADO → ENTREGADO) y el panel recalcula las ganancias al instante. Cada pedido tiene un botón **🧾 Facturar**.
+- **Facturas emitidas**: número, fecha, pedido, clienta, total y estado.
+- **Compras / Gastos / Movimientos**: historial completo con fechas, tallas y valores.
 
 ### El pedido se descuenta solo
 
-Cada pedido que entra por la landing descuenta una unidad del color pedido y deja el movimiento registrado en la pestaña `MOVIMIENTOS` con su costo. El stock nunca se actualiza a mano.
+Cada pedido que entra por la landing descuenta **una unidad del color y la talla pedidos** y deja el movimiento registrado en la pestaña `MOVIMIENTOS` con su costo. El stock nunca se actualiza a mano.
+
+### Facturación en PDF
+
+El botón **🧾 Facturar** de cada pedido abre `factura.html`, que arma la factura con los datos reales del pedido (clienta, ciudad, dirección, conjuntos con color y talla, envío, forma de pago, canal de pago y total) y ofrece:
+
+- **⬇ Descargar PDF**: guarda el archivo con el diseño de la factura (A4, lista para mandar a la clienta por WhatsApp).
+- **💬 Enviar por WhatsApp**: abre el chat de la clienta con el resumen del pedido y el aviso de que la factura va adjunta.
+- **🖨 Imprimir**: imprime o guarda como PDF desde el navegador.
+
+El número de factura (`LB-0001`, `LB-0002`…) se asigna solo la primera vez que se genera y queda guardado en la pestaña `FACTURAS`. Si solo quieres ver el diseño, entra directo a `https://lucyboutique.vercel.app/factura` y elige el pedido.
+
+El generador de PDF (`html2pdf.bundle.min.js`) está guardado en `assets/`, así que el facturador funciona sin internet.
 
 ### Las pestañas de la hoja
 
 | Pestaña | Contenido |
 | --- | --- |
 | `PEDIDOS` | Los pedidos (mismas columnas de siempre, no se tocan) |
-| `INVENTARIO` | Foto del stock por color (se recalcula sola) |
+| `INVENTARIO` | Stock por color y talla (se recalcula sola) |
 | `MOVIMIENTOS` | Libro de entradas y salidas: INICIAL, COMPRA, AJUSTE, PEDIDO, DEVOLUCION |
 | `GASTOS` | Empaques, pauta, transporte y demás salidas de dinero |
+| `FACTURAS` | Facturas emitidas con su número consecutivo |
+
 
 Las pestañas se crean solas la primera vez que se abre el panel.
 
@@ -109,12 +124,10 @@ El código vive en `apps-script/Code.gs`. Cada vez que se cambia hay que:
    - Descripción: por ejemplo "Inventario, compras, gastos y panel".
    - Ejecutar como: **Yo (lachimbahijueputa@gmail.com)**.
    - Usuarios con acceso: **Cualquiera** (las clientas tienen que poder dejar su pedido).
-3. Copiar la URL `/exec` nueva y ponerla en los dos sitios:
-   - `CONFIG.orderEndpoint` en `index.html`.
-   - `APPS_SCRIPT_URL` en las variables de entorno de Vercel.
+3. Copiar la URL `/exec` nueva y ponerla en `APPS_SCRIPT_URL` en las variables de entorno de Vercel.
 4. `vercel --prod --yes` para publicar.
 
-La URL `/exec` es la misma para siempre mientras no se cree una implementación nueva: por eso conviene guardarla en un solo lugar.
+La landing **no se toca** en este proceso: apunta a `https://lucyboutique.vercel.app/api/pedidos`, que es un proxy estable (`api/pedidos.js`) que reenvía al script usando `APPS_SCRIPT_URL`. Lo mismo hace el panel con `api/panel.js`.
 
 ## Meta Pixel y API de Conversiones
 

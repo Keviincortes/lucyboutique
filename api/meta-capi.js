@@ -110,6 +110,12 @@ module.exports = async function handler(req, res) {
   if (body.email) userData.em = [sha256(body.email)];
   if (body.phone) userData.ph = [sha256(normalizePhone(body.phone))];
   if (body.external_id) userData.external_id = [sha256(body.external_id)];
+  const cust = body.customer && typeof body.customer === 'object' ? body.customer : {};
+  if (cust.fn) userData.fn = [sha256(cust.fn)];
+  if (cust.ln) userData.ln = [sha256(cust.ln)];
+  if (cust.ct) userData.ct = [sha256(cust.ct)];
+  if (cust.country) userData.country = String(cust.country).toLowerCase();
+  if (cust.zip) userData.zip = sha256(cust.zip);
 
   const event = {
     event_name: eventName,

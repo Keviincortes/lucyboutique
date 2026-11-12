@@ -18,6 +18,13 @@ for (const page of ['politica.html', 'terminos.html']) {
   }
 }
 
+// Archivo de verificación de dominio de Meta (debe quedar en la raíz)
+for (const file of ['vbpx964ox465z692oh8eid8lgcuq2w.html']) {
+  if (existsSync(`${root}/${file}`)) {
+    await cp(`${root}/${file}`, `${dist}/${file}`);
+  }
+}
+
 // Solo los recursos que la landing usa (los originales pesados se quedan fuera)
 const keep = /\.(webp|mp4|jpe?g|png|gif|svg)$/i;
 const skip = /^(coleccion|ugc)\.mp4$|^tela-sudadera\.gif$|^lucy-header\.png$|^tabla-|^(rosa|negro|blanco|gris|cafe|chocolate)\.png$|^talla-(xs|s|m|l|xl)\.png$|^tela-sudadera-poster\.png$|^promo\.jpeg$|^logo\.jpeg$|^lucy-header\.jpg$|^(nequi|daviplata|bancolombia)\.png$/i;

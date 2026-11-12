@@ -58,9 +58,30 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 
 La landing instala el pixel `1441414194212741` en el `<head>` y dispara los eventos con un `eventID` único. Cada evento se envía dos veces con el mismo `eventID`: una por el pixel del navegador y otra por `/api/meta-capi` (API de Conversiones). Meta las deduplica, así que no se cuentan dobles, pero sí sobreviven a bloqueadores, iOS y cookies restringidas.
 
-### Activar la API de Conversiones (5 minutos, una sola vez)
+### Estado actual (ya configurado, no hay nada pendiente)
 
-1. Meta Events Manager > tu pixel > `Configuración` > `API de Conversiones` > `Generar token de acceso`.
+| Pieza | Estado |
+| --- | --- |
+| Pixel `1441414194212741` | Activo, los eventos llegan y salen "Procesados" |
+| Dominio `lucyboutique.vercel.app` | Verificado (metaetiqueta + archivo HTML en la raíz) |
+| API de conversiones con Meta (gateway) | Activa y recibiendo desde el navegador |
+| Integración directa (`/api/meta-capi`) | Activa con token propio y variables de entorno en Vercel |
+
+Variables de entorno ya cargadas en Vercel (producción): `META_CAPI_TOKEN`, `META_PIXEL_ID`, `META_CAPI_SECRET`, `META_API_VERSION`.
+
+### Probar eventos con el código de prueba
+
+La landing acepta el parámetro `?test_event_code=TEST49895` y lo reenvía al pixel y al servidor, de modo que los eventos aparecen en **Events Manager > Probar eventos > Sitio web**:
+
+```
+https://lucyboutique.vercel.app/?test_event_code=TEST49895
+```
+
+En la pestaña hay que elegir el canal **Sitio web** en "Seleccionador del origen de acción de eventos de prueba".
+
+### Activar la API de Conversiones (si hay que rehacerla)
+
+1. Meta Events Manager > tu pixel > `Configuración` > `API de conversiones` > `Configurar la integración directa` > `Generar identificador de acceso`.
 2. En Vercel, proyecto `lucyboutique` > `Settings` > `Environment Variables`, crea:
    - `META_CAPI_TOKEN` = el token que acabas de generar (Production y Preview).
    - `META_CAPI_SECRET` = una clave larga inventada, por ejemplo `lucy-2026-capi-9f3a`.
@@ -69,9 +90,11 @@ La landing instala el pixel `1441414194212741` en el `<head>` y dispara los even
 
 ### Verificar que sí está enviando
 
-- Events Manager > `Probar eventos`: abre la landing y deben aparecer `PageView` y `ViewContent` en segundos.
+- Events Manager > `Probar eventos`: abre la landing con `?test_event_code=TEST49895` y deben aparecer `PageView`, `Ver contenido`, `Finalización de compra iniciada` y `Cliente potencial` (Lead) como "Procesados".
 - En la consola del navegador: `fbq.getState()` debe mostrar el pixel con `eventCount` mayor que 0.
 - Prueba del servidor: `curl -i https://lucyboutique.vercel.app/api/meta-capi` debe responder 405 (existe) y no 404.
+- Confirmación de que Meta recibió el evento del servidor: un POST a `/api/meta-capi` debe responder `{"ok":true,"meta":{"events_received":1}}`.
+
 
 ### Purchase (venta confirmada)
 
@@ -97,9 +120,24 @@ La coincidencia avanzada envía nombre, celular normalizado a `+57` y ciudad **c
 
 ## Vercel
 
-El repositorio incluye `vercel.json` y un build estático mínimo. El build copia la landing, `politica.html`, `terminos.html` y solo los recursos optimizados (WebP y MP4 ligeros) a `dist/`. Los archivos originales pesados quedan fuera del despliegue mediante `.vercelignore` y la lista del propio build.
+El repositorio incluye `vercel.json` y un build estático mínimo. El build copia la landing, `politica.html`, `terminos.html`, el archivo de verificación de Meta (`vbpx964ox465z692oh8eid8lgcuq2w.html`) y solo los recursos optimizados (WebP y MP4 ligeros) a `dist/`. Los archivos originales pesados quedan fuera del despliegue mediante `.vercelignore` y la lista del propio build.
 
 Para vincularlo desde tu cuenta: importa `Keviincortes/lucyboutique` en Vercel, conserva la raíz del proyecto, deja `npm run build` como comando de build y `dist` como directorio de salida. La publicación en GitHub Pages continúa funcionando desde `index.html`.
+
+### Verificación de dominio en Meta
+
+Meta rastrea el sitio con `Range: bytes=0-1023`, por eso la metaetiqueta `facebook-domain-verification` va en la **primera línea del `<head>`** (byte 57). Si se mueve más abajo, Meta ya no la ve y el dominio queda "No verificado". Además se sirve el archivo `vbpx964ox465z692oh8eid8lgcuq2w.html` desde `api/verify.js` para el método de archivo HTML (Vercel redirige `/x.html` a `/x` con un 308 que Meta no sigue).
+
+### Selector de color y talla en celular
+
+Las miniaturas del selector de la sección "1. Elige tu promoción" son recortes de tela (`assets/sw-<color>.webp`) generados con ffmpeg:
+
+```powershell
+npm run thumbs
+```
+
+Miden 266x380 px y pesan menos de 8 KB cada una. En celular se muestran en una cuadrícula 3x2; el color elegido se marca con borde rosado y un check, y los botones de talla miden 48 px de alto para el dedo. Si se cambian las fotos de color hay que volver a correr `npm run thumbs`.
+
 
 ## Pruebas recomendadas antes de anuncios
 

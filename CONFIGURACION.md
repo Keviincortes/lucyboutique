@@ -54,27 +54,46 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 4. Comprueba que el mensaje de WhatsApp se abre con los datos correctos.
 5. Envía un comprobante de prueba y cambia manualmente el estado en Sheets.
 
-## Meta Pixel
+## Meta Pixel y API de Conversiones
 
-La landing carga una única instalación del Pixel 1441414194212741 en la sección head. El ID también puede sobrescribirse en Vercel con VITE_META_PIXEL_ID.
+La landing instala el pixel `1441414194212741` en el `<head>` y dispara los eventos con un `eventID` único. Cada evento se envía dos veces con el mismo `eventID`: una por el pixel del navegador y otra por `/api/meta-capi` (API de Conversiones). Meta las deduplica, así que no se cuentan dobles, pero sí sobreviven a bloqueadores, iOS y cookies restringidas.
 
-Cuando tengas el ID real del Pixel:
+### Activar la API de Conversiones (5 minutos, una sola vez)
 
-1. En Vercel abre el proyecto y entra a `Settings > Environment Variables`.
-2. Crea `VITE_META_PIXEL_ID` con el ID numérico del Pixel. No pongas tokens de Conversions API en el navegador.
-3. Actívala para `Production` y, si vas a probar previews, también para `Preview`.
-4. Ejecuta un nuevo redeploy desde `Deployments > Redeploy` o publica un nuevo commit.
-5. Abre la web y comprueba en Meta Events Manager > Test events.
+1. Meta Events Manager > tu pixel > `Configuración` > `API de Conversiones` > `Generar token de acceso`.
+2. En Vercel, proyecto `lucyboutique` > `Settings` > `Environment Variables`, crea:
+   - `META_CAPI_TOKEN` = el token que acabas de generar (Production y Preview).
+   - `META_CAPI_SECRET` = una clave larga inventada, por ejemplo `lucy-2026-capi-9f3a`.
+   - `META_PIXEL_ID` = `1441414194212741` (opcional, es el valor por defecto).
+3. Redeploy. Mientras no exista `META_CAPI_TOKEN`, `/api/meta-capi` responde 204 y no envía nada: el pixel del navegador funciona igual.
 
-Eventos preparados:
+### Verificar que sí está enviando
+
+- Events Manager > `Probar eventos`: abre la landing y deben aparecer `PageView` y `ViewContent` en segundos.
+- En la consola del navegador: `fbq.getState()` debe mostrar el pixel con `eventCount` mayor que 0.
+- Prueba del servidor: `curl -i https://lucyboutique.vercel.app/api/meta-capi` debe responder 405 (existe) y no 404.
+
+### Purchase (venta confirmada)
+
+`Purchase` no se dispara con un clic de WhatsApp: se envía cuando el pago está confirmado, usando la referencia del pedido como `event_id`.
+
+```powershell
+$env:META_CAPI_SECRET="lucy-2026-capi-9f3a"
+node scripts/purchase.mjs --value 152800 --reference LUCY-1794457115195 --fbp "fb.3.1794..." --fbc "fb.1.1794..."
+```
+
+Los valores `_fbp` y `_fbc` del pedido quedan guardados en la hoja (columnas `fbp` y `fbc` del JSON enviado). Si no los tienes, el evento igual se envía y Meta lo atribuye con la IP y el navegador del servidor.
+
+### Eventos y datos
 
 - `PageView`: al cargar la página.
-- `ViewContent`: al inicializar la vista del conjunto.
-- `InitiateCheckout`: una vez al primer foco del formulario, con el valor de la promoción seleccionada.
-- `Contact`: una vez por sesión al hacer clic en el botón flotante de WhatsApp.
-- `Lead`: una vez al enviar el pedido, antes de abrir WhatsApp, con referencia como event ID.
+- `ViewContent`: al entrar, con el conjunto y su valor.
+- `InitiateCheckout`: al primer foco del formulario, con la promoción elegida.
+- `Contact`: una vez por sesión al abrir WhatsApp.
+- `Lead`: al enviar el pedido, con la referencia como `eventID`.
+- `Purchase`: manual, al confirmar el pago.
 
-No se envían nombres, teléfonos, direcciones, cédulas ni correos a Meta. Purchase no se dispara porque el pago no se confirma en la landing. No se implementa Conversions API todavía.
+La coincidencia avanzada envía nombre, celular normalizado a `+57` y ciudad **cifrados con SHA-256**; el texto plano nunca sale del navegador. No se envían direcciones, cédulas ni correos. La política de datos lo describe en `politica.html`.
 
 ## Vercel
 

@@ -27,32 +27,56 @@
   <link rel="preload" as="image" href="assets/lucy-header-800.webp" imagesrcset="assets/lucy-header-800.webp 800w, assets/lucy-header-1600.webp 1600w" imagesizes="(min-width:851px) 520px, 100vw" fetchpriority="high">
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&family=Pacifico&display=swap" rel="stylesheet">
 
-  <!-- Meta Pixel: PageView inmediato (sin bloquear la compra) -->
+  <!-- Meta Pixel + API de Conversiones (mismo eventID para deduplicar) -->
   <script>
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-    n.callMethod.apply(n,arguments):n.queue.push(n)};
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
     if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
     n.queue=[];t=b.createElement(e);t.async=!0;
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
     fbq('init', '1441414194212741');
-    fbq('track', 'PageView');
-    fbq('track', 'ViewContent', {
+
+    window.lucyEventId = function () {
+      try {
+        if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      } catch (e) {}
+      return 'e' + Date.now() + Math.random().toString(36).slice(2, 10);
+    };
+
+    window.lucyTrack = function (event, params, eventID) {
+      try {
+        if (!window.fbq) return false;
+        var id = eventID || window.lucyEventId();
+        window.fbq('track', event, params || {}, { eventID: id });
+        try {
+          var payload = JSON.stringify({
+            event_name: event,
+            event_id: id,
+            event_time: Math.floor(Date.now() / 1000),
+            event_source_url: location.href,
+            custom_data: params || {}
+          });
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/meta-capi', new Blob([payload], { type: 'application/json' }));
+          } else {
+            fetch('/api/meta-capi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload, keepalive: true });
+          }
+        } catch (e) {}
+        return true;
+      } catch (e) { return false; }
+    };
+
+    window.lucyTrack('PageView');
+    window.lucyTrack('ViewContent', {
       content_ids: ['lucy-conjunto'],
       content_type: 'product',
       content_name: 'Conjunto Poly Like',
       value: 69900,
       currency: 'COP'
     });
-    window.lucyTrack = function (event, params, eventID) {
-      try {
-        if (!window.fbq) return false;
-        window.fbq('track', event, params || {}, eventID ? { eventID: eventID } : undefined);
-        return true;
-      } catch (e) { return false; }
-    };
   </script>
 
 <style>
@@ -419,7 +443,7 @@
           <a href="/terminos" target="_blank" rel="noopener">Términos y cambios</a>
           <a href="https://wa.me/573232345446" target="_blank" rel="noopener">WhatsApp +57 323 234 5446</a>
         </div>
-        <p class="legal-note">Usamos medición anónima (Meta Pixel) para medir el rendimiento de nuestras campañas. No enviamos nombres, teléfonos ni direcciones a Meta.</p>
+        <p class="legal-note">Usamos el pixel de Meta para medir nuestras campañas. Los datos de contacto se envían cifrados (hash SHA-256); nunca se comparten en texto plano.</p>
       </div>
     </div>
   </footer>
@@ -703,6 +727,10 @@
     const retry = q('#whatsappRetry');
 
     const clean = v => String(v ?? '').trim().replace(/\s+/g, ' ');
+    const cookie = name => {
+      const hit = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+      return hit ? decodeURIComponent(hit.slice(name.length + 1)) : '';
+    };
     const title = v => clean(v).toLocaleLowerCase('es-CO').replace(/(^|[\s-])([a-záéíóúñ])/g, (_, a, b) => a + b.toLocaleUpperCase('es-CO'));
     const digits = v => clean(v).replace(/\D/g, '');
     const formatPhone = v => { const p = digits(v); return p.length === 10 ? p.replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3') : p; };
@@ -780,6 +808,8 @@
         paymentMode: data.payment,
         gift: data.payment === 'advance',
         status: 'PENDIENTE_COMPROBANTE',
+        fbp: cookie('_fbp'),
+        fbc: cookie('_fbc'),
         createdAt: new Date().toISOString()
       };
       order.message = buildMessage(order, data, product, shipping);
@@ -833,6 +863,19 @@
       const waUrl = buildWhatsApp(order);
       retry.href = waUrl;
       localStorage.setItem('lucy_last_order', JSON.stringify(order));
+
+      /* Coincidencia avanzada: el teléfono va normalizado a Colombia (+57) */
+      try {
+        const parts = title(data.name).split(' ');
+        const firstName = parts.shift() || '';
+        window.fbq('init', '1441414194212741', {
+          fn: firstName,
+          ln: parts.join(' ') || firstName,
+          ph: '57' + digits(data.phone),
+          ct: normalize(data.city).replace(/\s+/g, ''),
+          country: 'co'
+        });
+      } catch (e) {}
 
       window.lucyTrack('Lead', {
         content_ids: ['lucy-conjunto'],

@@ -8,6 +8,7 @@ function doPost(e){
     if(raw.action!=='create_order')return json_({ok:false,error:'Acción inválida'});
     const o=normalizeOrder_(raw);
     validate_(o);
+    reconcileTotals_(o);
     const sheet=getSheet_();
     ensureHeaders_(sheet);
     const detail=o.items.map(function(item,index){return 'Sudadera '+(index+1)+' | Producto: Set chaqueta + pantalón | Color: '+item.color+' | Talla: '+item.size}).join(' || ');
@@ -49,6 +50,15 @@ function validate_(o){
   if(!o.reference||!o.customer.name||!o.customer.phone||!o.customer.city||!o.customer.address||!o.customer.neighborhood||!o.customer.unit)throw new Error('Faltan datos obligatorios');
   if(!Array.isArray(o.items)||o.items.length<1||o.items.length>2)throw new Error('Cantidad inválida');
   o.items.forEach(function(item){if(!item.color||!item.size)throw new Error('Cada sudadera necesita color y talla')});
+}
+function cityKey_(value){return String(value||'').toLocaleLowerCase('es-CO').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim()}
+function reconcileTotals_(o){
+  o.quantity=o.items.length;
+  o.productTotal=o.quantity===2?129900:69900;
+  o.shipping=['bogota','bogota dc','bogota d.c.','bta'].indexOf(cityKey_(o.customer.city))>=0?10000:22900;
+  o.paymentMode=o.paymentMode==='reserve'?'reserve':'advance';
+  o.amountToPay=o.paymentMode==='advance'?o.productTotal+o.shipping:o.shipping;
+  o.gift=o.paymentMode==='advance';
 }
 
 function getSheet_(){const active=SpreadsheetApp.getActiveSpreadsheet();if(active)return active.getSheets()[0];const id=PropertiesService.getScriptProperties().getProperty('SHEET_ID');if(!id)throw new Error('Falta SHEET_ID o el script no está vinculado al Google Sheet');return SpreadsheetApp.openById(id).getSheets()[0]}

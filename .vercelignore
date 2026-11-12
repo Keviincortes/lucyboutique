@@ -1,0 +1,10 @@
+_backup_*/
+dist/
+node_modules/
+index.template.html
+assets/coleccion.mp4
+assets/ugc.mp4
+assets/tela-sudadera.gif
+assets/*.png
+assets/*.jpeg
+assets/*.jpg

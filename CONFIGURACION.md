@@ -54,9 +54,9 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 4. Comprueba que el mensaje de WhatsApp se abre con los datos correctos.
 5. Envía un comprobante de prueba y cambia manualmente el estado en Sheets.
 
-## Meta Pixel y consentimiento
+## Meta Pixel
 
-La landing carga el Pixel `1441414194212741` por defecto al entrar. El ID también puede sobrescribirse en Vercel con `VITE_META_PIXEL_ID`; si se elimina el ID, el sitio sigue funcionando sin medición. No se muestra un aviso visual de medición.
+La landing carga una única instalación del Pixel 1441414194212741 en la sección head. El ID también puede sobrescribirse en Vercel con VITE_META_PIXEL_ID.
 
 Cuando tengas el ID real del Pixel:
 
@@ -64,21 +64,21 @@ Cuando tengas el ID real del Pixel:
 2. Crea `VITE_META_PIXEL_ID` con el ID numérico del Pixel. No pongas tokens de Conversions API en el navegador.
 3. Actívala para `Production` y, si vas a probar previews, también para `Preview`.
 4. Ejecuta un nuevo redeploy desde `Deployments > Redeploy` o publica un nuevo commit.
-5. Abre la web, acepta el aviso de medición y comprueba en Meta Events Manager > Test events.
+5. Abre la web y comprueba en Meta Events Manager > Test events.
 
 Eventos preparados:
 
-- `PageView`: una vez al aceptar medición.
+- `PageView`: al cargar la página.
 - `ViewContent`: al inicializar la vista del conjunto.
-- `InitiateCheckout`: al comenzar a completar el formulario.
-- `Contact`: al abrir WhatsApp o enviar el pedido.
-- `Lead`: cuando el Web App confirma que el pedido se registró en Sheets.
+- `InitiateCheckout`: una vez al primer foco del formulario, con el valor de la promoción seleccionada.
+- `Contact`: una vez por sesión al hacer clic en el botón flotante de WhatsApp.
+- `Lead`: una vez al enviar el pedido, antes de abrir WhatsApp, con referencia como event ID.
 
-No se envían nombres, teléfonos, direcciones, cédulas ni correos a Meta. `Purchase` no se dispara por un clic de WhatsApp; queda reservado para una confirmación real posterior. La medición se carga por defecto al entrar.
+No se envían nombres, teléfonos, direcciones, cédulas ni correos a Meta. Purchase no se dispara porque el pago no se confirma en la landing. No se implementa Conversions API todavía.
 
 ## Vercel
 
-El repositorio incluye `vercel.json` y un build estático mínimo. El build copia la landing y los recursos a `dist/` y reemplaza el marcador del Pixel con `VITE_META_PIXEL_ID` si Vercel lo tiene configurado. No hay credenciales de Vercel en el repositorio.
+El repositorio incluye `vercel.json` y un build estático mínimo. El build copia la landing, `politica.html`, `terminos.html` y solo los recursos optimizados (WebP y MP4 ligeros) a `dist/`. Los archivos originales pesados quedan fuera del despliegue mediante `.vercelignore` y la lista del propio build.
 
 Para vincularlo desde tu cuenta: importa `Keviincortes/lucyboutique` en Vercel, conserva la raíz del proyecto, deja `npm run build` como comando de build y `dist` como directorio de salida. La publicación en GitHub Pages continúa funcionando desde `index.html`.
 
@@ -89,4 +89,4 @@ Para vincularlo desde tu cuenta: importa `Keviincortes/lucyboutique` en Vercel, 
 - Probar pago anticipado y pago contra entrega.
 - Confirmar que WhatsApp recibe colores, tallas, cantidades, promoción, envío y total.
 - Confirmar la fila en Google Sheets y el estado de comprobante.
-- Aceptar medición y comprobar `PageView`, `ViewContent`, `InitiateCheckout`, `Contact` y `Lead` en Meta Test Events.
+- Comprobar `PageView`, `ViewContent`, `InitiateCheckout`, `Contact` y `Lead` en Meta Test Events.

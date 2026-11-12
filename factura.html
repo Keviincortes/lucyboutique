@@ -50,7 +50,8 @@ h1,h2,h3{font-weight:700}
 .cfg .full{grid-column:1/-1}
 
 /* ---------------- INVOICE ---------------- */
-.pdf-stage{position:fixed;left:-10000px;top:0;width:794px;background:#fff;z-index:-1}
+.pdf-wrap{position:absolute;left:-99999px;top:0;width:794px;background:#fff;z-index:-1}
+.pdf-stage{width:794px;background:#fff}
 .inv{width:794px;background:#fff;color:#2A1226;font-family:var(--sans);position:relative;overflow:hidden}
 .inv-top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:34px 44px 26px;background:linear-gradient(120deg,var(--vino) 0%,#3A0E2A 55%,#2A0E22 100%);position:relative;overflow:hidden}
 .inv-top::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 33px,rgba(255,255,255,.04) 33px,rgba(255,255,255,.04) 34px),repepeating-linear-gradient(90deg,transparent,transparent 33px,rgba(255,255,255,.04) 33px,rgba(255,255,255,.04) 34px)}
@@ -130,6 +131,13 @@ h1,h2,h3{font-weight:700}
 .pick-row b{font-size:13.5px}
 .pick-row small{display:block;color:var(--muted);font-size:11px}
 .pick-row .amt{margin-left:auto;font-weight:800;color:var(--rosa-lt);white-space:nowrap}
+.mrow{display:grid;grid-template-columns:1fr 62px 96px 92px 30px;gap:6px;align-items:center;margin-bottom:6px}
+.mrow input{width:100%;padding:9px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--card2);color:#fff;font-size:13px}
+.mrow input:focus{outline:none;border-color:var(--rosa);box-shadow:0 0 0 3px var(--rosa-12)}
+.mimp{font-size:12.5px;font-weight:800;color:var(--oro-lt);text-align:right;white-space:nowrap}
+.mdel{width:30px;height:30px;border-radius:9px;color:var(--muted);font-size:16px;font-weight:900}
+.mdel:hover{background:rgba(228,88,107,.16);color:var(--danger)}
+@media(max-width:700px){.mrow{grid-template-columns:1fr 54px 84px 30px}.mrow .mimp{display:none}}
 .login{max-width:420px;margin:60px auto;background:var(--card);border:1px solid var(--line2);border-radius:24px;padding:28px 24px;text-align:center}
 .login img{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--oro)}
 .login h1{font-family:var(--script);font-size:26px;color:var(--rosa-lt);margin:12px 0 4px}
@@ -180,7 +188,31 @@ h1,h2,h3{font-weight:700}
 <div id="pick" class="pick" hidden></div>
 
 <div class="wrap" id="app" hidden>
-  <div class="cfg">
+  <div class="cfg" id="manualBox" hidden>
+    <div class="card full">
+      <label style="font-size:1.05rem;font-weight:800;color:#fff;letter-spacing:0;text-transform:none;margin-bottom:4px">🧾 Factura manual</label>
+      <small style="color:#A78FA6;font-size:.78rem">Para una venta por aparte, sin pedido en la landing. Queda guardada y cuenta como venta.</small>
+    </div>
+    <div class="card"><label for="mNombre">Nombre de la clienta *</label><input id="mNombre" placeholder="Nombre y apellido"></div>
+    <div class="card"><label for="mCedula">Cédula</label><input id="mCedula" placeholder="Opcional"></div>
+    <div class="card"><label for="mCelular">Celular</label><input id="mCelular" placeholder="300 000 0000"></div>
+    <div class="card"><label for="mCiudad">Ciudad</label><input id="mCiudad" placeholder="Bogotá"></div>
+    <div class="card full"><label for="mDireccion">Dirección de entrega</label><input id="mDireccion" placeholder="Calle, número, barrio"></div>
+    <div class="card"><label for="mMetodo">Forma de pago</label><select id="mMetodo"><option value="anticipado">Pago anticipado</option><option value="contraentrega">Contra entrega</option></select></div>
+    <div class="card"><label for="mCanal">Canal de pago</label><select id="mCanal"><option value="nequi">Nequi</option><option value="daviplata">DaviPlata</option><option value="bancolombia">Bancolombia</option><option value="transferencia">Transferencia</option></select></div>
+    <div class="card full">
+      <label>Productos</label>
+      <div id="mItems"></div>
+      <button type="button" id="mAdd" class="btn btn-ghost btn-sm" style="margin-top:8px">+ Agregar producto</button>
+    </div>
+    <div class="card"><label for="mTotal">Total de la factura</label><input id="mTotal" readonly value="$0"></div>
+    <div class="card full" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-pink" id="mSave">Generar factura</button>
+      <small id="mMsg" style="color:#A78FA6;font-size:.8rem"></small>
+    </div>
+  </div>
+
+  <div class="cfg" id="cfgBox">
     <div class="card">
       <label for="canal">Canal de pago</label>
       <select id="canal">
@@ -215,12 +247,22 @@ h1,h2,h3{font-weight:700}
 
 <div id="toast"></div>
 
+<script src="assets/html2canvas.min.js"></script>
+<script src="assets/jspdf.umd.min.js"></script>
 <script src="assets/html2pdf.bundle.min.js"></script>
 <script>
 (function(){
   'use strict';
   var $=function(s){return document.querySelector(s)};
-  var KEY=sessionStorage.getItem('lucy_panel_key')||'';
+  var $$=function(s){return [].slice.call(document.querySelectorAll(s))};
+  var KEY=sessionStorage.getItem('lucy_panel_key')||leerCookie_('lucy_panel_key')||'';
+  function leerCookie_(n){
+    var m=document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));
+    return m?decodeURIComponent(m[1]):'';
+  }
+  function guardarCookie_(v){
+    document.cookie='lucy_panel_key='+encodeURIComponent(v)+';path=/;max-age=2592000;samesite=lax';
+  }
   var SETTINGS={
     whatsapp:'573232345446', nequi:'323 234 5446', daviplata:'323 234 5446',
     web:'lucyboutique.vercel.app', prefijo:'LB',
@@ -436,24 +478,33 @@ h1,h2,h3{font-weight:700}
   }
 
   function descargarPDF(){
-    var stage=document.createElement('div');
-    stage.className='pdf-stage';
-    stage.innerHTML=invoiceHTML(INVOICE);
-    document.body.appendChild(stage);
-    if(typeof html2pdf==='undefined'){
+    var JsPDF=(window.jspdf&&window.jspdf.jsPDF)||window.jsPDF;
+    if(typeof html2canvas==='undefined'||!JsPDF){
       toast('No se pudo cargar el generador de PDF: usa Imprimir y elige "Guardar como PDF".','err');
-      document.body.removeChild(stage);
       return;
     }
+    // Se dibuja la factura en un lienzo y se mete en el PDF a mano:
+    // asi no depende del worker de html2pdf, que en algunos navegadores
+    // deja la pagina en blanco.
+    var stage=document.createElement('div');
+    stage.style.cssText='position:fixed;left:0;top:0;width:794px;background:#fff;z-index:99999;overflow:hidden';
+    stage.innerHTML=invoiceHTML(INVOICE);
+    document.body.appendChild(stage);
     toast('Generando PDF…','ok');
-    html2pdf().set({
-      margin:[0,0,0,0],
-      filename:'Factura-'+(INVOICE.numero||INVOICE.ref||'Lucy')+'.pdf',
-      image:{type:'jpeg',quality:.98},
-      html2canvas:{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false},
-      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-      pagebreak:{mode:['css','legacy']}
-    }).from(stage).save().then(function(){
+
+    var listo=(document.fonts&&document.fonts.ready)?document.fonts.ready:Promise.resolve();
+    listo.then(function(){
+      return html2canvas(stage, { scale:2, useCORS:true, backgroundColor:'#ffffff', logging:false, windowWidth:794, windowHeight:1200 });
+    }).then(function(canvas){
+      var img=canvas.toDataURL('image/jpeg',0.95);
+      var pdf=new JsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});
+      var pw=pdf.internal.pageSize.getWidth();
+      var ph=pdf.internal.pageSize.getHeight();
+      var ratio=Math.min(pw/canvas.width, ph/canvas.height);
+      var w=canvas.width*ratio, h=canvas.height*ratio;
+      pdf.addImage(img,'JPEG',(pw-w)/2,0,w,h,'','FAST');
+      pdf.save('Factura-'+(INVOICE.numero||INVOICE.ref||'Lucy')+'.pdf');
+    }).then(function(){
       document.body.removeChild(stage);
       toast('PDF descargado','ok');
     }).catch(function(e){
@@ -477,10 +528,102 @@ h1,h2,h3{font-weight:700}
   }
 
   function enviarWa(){
-    var tel=String(CURRENT.celular||'').replace(/\D/g,'');
+    var tel=String((CURRENT&&CURRENT.celular)||(INVOICE&&INVOICE.clienta&&INVOICE.clienta.celular)||'').replace(/\D/g,'');
     if(tel.length===10)tel='57'+tel;
     var texto=encodeURIComponent(waMessage());
     window.open('https://wa.me/'+(tel||SETTINGS.whatsapp)+'?text='+texto,'_blank');
+  }
+
+  /* ---------------- factura manual ---------------- */
+  var mItems = [];
+
+  function renderManualItems(){
+    if(!mItems.length) mItems = [{ desc:'', qty:1, price:69900 }];
+    $('#mItems').innerHTML = mItems.map(function(it,i){
+      return '<div class="mrow" data-i="'+i+'">'
+        + '<input type="text" data-f="desc" value="'+esc(it.desc)+'" placeholder="Conjunto Poly Like Rosa M">'
+        + '<input type="number" data-f="qty" min="1" step="1" value="'+it.qty+'" title="Cantidad">'
+        + '<input type="number" data-f="price" min="0" step="500" value="'+it.price+'" title="Precio unitario">'
+        + '<b class="mimp">'+fmt(it.qty*it.price)+'</b>'
+        + '<button type="button" class="mdel" title="Quitar">×</button>'
+        + '</div>';
+    }).join('');
+    $$('#mItems .mrow').forEach(function(row){
+      var i = Number(row.getAttribute('data-i'));
+      $$('input',row).forEach(function(inp){
+        inp.addEventListener('input',function(){
+          var f = inp.getAttribute('data-f');
+          var v = inp.value;
+          if(f==='qty'||f==='price') v = Number(v)||0;
+          mItems[i][f] = v;
+          if(f==='qty'||f==='price'){
+            var imp = row.querySelector('.mimp');
+            if(imp) imp.textContent = fmt(mItems[i].qty*mItems[i].price);
+            calcularManual();
+          }
+        });
+      });
+      var del = row.querySelector('.mdel');
+      if(del) del.addEventListener('click',function(){
+        mItems.splice(i,1);
+        renderManualItems();
+        calcularManual();
+      });
+    });
+    calcularManual();
+  }
+
+  function calcularManual(){
+    var t = mItems.reduce(function(s,it){ return s + (Number(it.qty)||0)*(Number(it.price)||0); }, 0);
+    $('#mTotal').value = fmt(t);
+    return t;
+  }
+
+  function guardarManual(){
+    var nombre = $('#mNombre').value.trim();
+    if(!nombre){ $('#mMsg').textContent = 'Escribe el nombre de la clienta.'; return; }
+    var items = mItems.filter(function(it){ return it.desc.trim() && (Number(it.qty)||0) > 0; });
+    if(!items.length){ $('#mMsg').textContent = 'Agrega al menos un producto.'; return; }
+    var total = calcularManual();
+    if(!total){ $('#mMsg').textContent = 'El total no puede quedar en cero.'; return; }
+    var detalle = items.map(function(it){ return it.desc.trim()+' x'+it.qty+' ('+fmt(it.price)+')'; }).join(' · ');
+    $('#mMsg').textContent = 'Guardando…';
+    fetch('/api/panel',{method:'POST',headers:{'Content-Type':'application/json','x-panel-key':KEY},
+      body:JSON.stringify({action:'save_invoice_manual',clienta:nombre,celular:$('#mCelular').value.trim(),
+        ciudad:$('#mCiudad').value.trim(),detalle:detalle,total:total,estado:'pagada',
+        notas:$('#notas').value.trim()})})
+      .then(function(r){ return r.json().then(function(j){
+        if(!r.ok||j.ok===false) throw new Error(j.error||'No se pudo guardar');
+        return j;
+      })})
+      .then(function(j){
+        var detallePedido = items.map(function(it){ return it.desc.trim(); }).join(' · ');
+        INVOICE = {
+          numero:j.numero, ref:j.referencia||'MANUAL', fecha:hoyISO(), estado:'pagada',
+          clienta:{nombre:nombre,cedula:$('#mCedula').value.trim(),celular:$('#mCelular').value.trim(),
+            ciudad:$('#mCiudad').value.trim(),barrio:'',direccion:$('#mDireccion').value.trim(),extra:''},
+          items:items.map(function(it){
+            return {nombre:it.desc.trim(),detalle:'',color:'',talla:'',qty:Number(it.qty)||1,price:Number(it.price)||0};
+          }),
+          envio:0, metodo:$('#mMetodo').value, canal:$('#mCanal').value,
+          regalo:$('#mMetodo').value==='anticipado', notas:$('#notas').value.trim(),
+          tot:{sub:total,envio:0,total:total,hoy:total,saldo:0}
+        };
+        $('#numero').value = j.numero;
+        $('#manualBox').hidden = true;
+        $('#cfgBox').hidden = false;
+        $('#estado').value = 'pagada';
+        $('#hint').innerHTML = 'Factura manual <b>'+esc(j.numero)+'</b> · total <b>'+fmt(total)+'</b>. Descarga el PDF o mándalo por WhatsApp.';
+        $('#preview').innerHTML = invoiceHTML(INVOICE);
+        $('#mMsg').textContent = '';
+        toast('Factura '+j.numero+' guardada', 'ok');
+      })
+      .catch(function(e){ $('#mMsg').textContent = e.message; });
+  }
+
+  function hoyISO(){
+    var d = new Date();
+    return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
   }
 
   /* ---------------- arranque ---------------- */
@@ -492,8 +635,9 @@ h1,h2,h3{font-weight:700}
       var pick=$('#pick');
       pick.hidden=false;
       $('#app').hidden=true;
-      pick.innerHTML='<div class="hintbar">Elige el pedido que quieres facturar:</div>'+
-        orders.map(function(o){
+      pick.innerHTML='<div class="hintbar">Elige el pedido que quieres facturar, o crea una factura manual para una venta por aparte.</div>'
+        +'<div style="margin:10px 0 14px"><a class="btn btn-gold" href="factura.html?nueva=1">＋ Factura manual (venta por aparte)</a></div>'
+        + orders.map(function(o){
           return '<div class="pick-row" data-ref="'+esc(o.referencia)+'"><div><b>'+esc(o.nombre||'Sin nombre')+'</b>'
             +'<small>'+esc(o.referencia)+' · '+esc(o.fecha)+' · '+esc(o.ciudad||'')+' · '+o.cantidad+' set(s)</small></div>'
             +'<div class="amt">'+fmt(o.producto+o.envio)+'</div></div>';
@@ -518,6 +662,16 @@ h1,h2,h3{font-weight:700}
   function cargar(ref){
     return api().then(function(d){
       DATA=d;
+      var nueva=(location.search.match(/nueva=1/)||[])[0];
+      if(nueva){
+        $('#pick').hidden=true;
+        $('#app').hidden=false;
+        $('#manualBox').hidden=false;
+        $('#cfgBox').hidden=true;
+        $('#hint').hidden=true;
+        renderManualItems();
+        return;
+      }
       pickOrder(ref||(location.search.match(/ref=([^&]+)/)||[])[1]||'');
     }).catch(function(e){
       if(/401|Clave/i.test(e.message)){
@@ -533,8 +687,8 @@ h1,h2,h3{font-weight:700}
     if(!INVOICE)return;
     var btn=this;btn.disabled=true;btn.innerHTML='<span class="spin"></span> Generando';
     var finish=function(){btn.disabled=false;btn.innerHTML='⬇ Descargar PDF'};
-    // Si la factura ya tiene numero no se vuelve a guardar (no se duplica).
-    if($('#numero').value){
+    // Factura manual: ya tiene numero, no se vuelve a guardar.
+    if(!CURRENT || $('#numero').value){
       descargarPDF().then(finish).catch(finish);
       return;
     }
@@ -550,13 +704,17 @@ h1,h2,h3{font-weight:700}
 
   $('#btnWa').addEventListener('click',function(){
     if(!INVOICE)return;
-    if(!$('#numero').value){
-      guardar().then(function(j){$('#numero').value=j.numero;render();enviarWa();}).catch(function(e){toast(e.message,'err');enviarWa()});
-    }else enviarWa();
+    if(!CURRENT || $('#numero').value){
+      enviarWa();
+      return;
+    }
+    guardar().then(function(j){$('#numero').value=j.numero;render();enviarWa();}).catch(function(e){toast(e.message,'err');enviarWa()});
   });
 
   $('#btnPrint').addEventListener('click',function(){window.print()});
   $('#btnReload').addEventListener('click',function(){cargar((location.search.match(/ref=([^&]+)/)||[])[1]||'')});
+  $('#mAdd').addEventListener('click',function(){ mItems.push({desc:'',qty:1,price:69900}); renderManualItems(); });
+  $('#mSave').addEventListener('click',guardarManual);
   ['#canal','#estado','#notas'].forEach(function(s){$(s).addEventListener('change',render)});
 
   $('#btnLogin').addEventListener('click',function(){
@@ -565,6 +723,7 @@ h1,h2,h3{font-weight:700}
     KEY=v;
     api().then(function(){
       sessionStorage.setItem('lucy_panel_key',v);
+      guardarCookie_(v);
       $('#login').hidden=true;
       cargar();
     }).catch(function(e){KEY='';$('#err').textContent=e.message});

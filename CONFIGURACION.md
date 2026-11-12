@@ -18,13 +18,22 @@ Para registrar pedidos automáticamente, el sitio necesita el Web App gratuito d
 Ahí se maneja todo el negocio:
 
 - **Resumen**: ventas confirmadas, por cobrar, ganancia bruta, ganancia neta, valor del inventario, invertido en compras, gastos y cobrado.
-- **Registrar compra**: entra mercadería por color. Si llenas el **desglose por talla** (XS, S, M, L, XL) el stock queda separado por talla; si lo dejas vacío, la entrada queda "sin desglose".
-- **Ajustar inventario**: corrige el conteo real (merma, pérdida) por color y talla.
+- **Registrar compra**: entra mercadería. Primero eliges el **producto** (puedes agregar otros nuevos con "➕ Agregar producto") y el **color**; luego la **cantidad** y el **costo por set**.
+  - **Grupo de tallas**: eliges `S + M` o `L + XL` y la cantidad se aplica a cada talla del grupo (3 en S y 3 en M = 6 sets). Abajo aparecen los números de cada talla para cambiarlos uno por uno, y se muestra el total que se va a guardar.
+  - Si no eliges grupo, la entrada queda "sin desglose de talla".
+- **Ajustar inventario**: corrige el conteo real (merma, pérdida) por producto, color y talla.
 - **Registrar gasto**: empaques, pauta publicitaria, transporte y gasolina, impuestos, otros.
-- **Inventario por color**: total y una ficha por talla (XS, S, M, L, XL) con avisos de stock bajo o agotado.
+- **Inventario por color**: total y una ficha por talla (S, M, L, XL) con avisos de stock bajo o agotado. Hay pestañas para cambiar de producto.
 - **Pedidos**: se cambia el estado (PENDIENTE COMPROBANTE → PAGADO → ENTREGADO) y el panel recalcula las ganancias al instante. Cada pedido tiene un botón **🧾 Facturar**.
-- **Facturas emitidas**: número, fecha, pedido, clienta, total y estado.
-- **Compras / Gastos / Movimientos**: historial completo con fechas, tallas y valores.
+- **Facturas emitidas**: número, fecha, pedido, clienta, total y estado. Las **manuales** salen con la etiqueta "Manual".
+- **Compras / Gastos / Movimientos**: historial completo con fechas, producto, tallas y valores.
+
+### Tallas y productos
+
+- Tallas manejadas: **S, M, L, XL** (la XS se quitó porque ya no se maneja).
+- Grupos de tallas en el panel: **S + M** y **L + XL**.
+- Productos: se guardan en la pestaña `PRODUCTOS` de la hoja. Vienen "Conjunto Poly Like" y "Promo 2 Conjuntos Poly Like"; puedes agregar más desde el panel.
+- Los pedidos que entran por la landing siempre descuentan del producto "Conjunto Poly Like" (es el único físico que se vende por la web).
 
 ### El pedido se descuenta solo
 
@@ -34,23 +43,33 @@ Cada pedido que entra por la landing descuenta **una unidad del color y la talla
 
 El botón **🧾 Facturar** de cada pedido abre `factura.html`, que arma la factura con los datos reales del pedido (clienta, ciudad, dirección, conjuntos con color y talla, envío, forma de pago, canal de pago y total) y ofrece:
 
-- **⬇ Descargar PDF**: guarda el archivo con el diseño de la factura (A4, lista para mandar a la clienta por WhatsApp).
-- **💬 Enviar por WhatsApp**: abre el chat de la clienta con el resumen del pedido y el aviso de que la factura va adjunta.
+- **⬇ Descargar PDF**: guarda el archivo A4 con el diseño de la factura (lista para mandar a la clienta por WhatsApp).
+- **💬 Enviar por WhatsApp**: abre el chat de la clienta con el resumen del pedido.
 - **🖨 Imprimir**: imprime o guarda como PDF desde el navegador.
 
-El número de factura (`LB-0001`, `LB-0002`…) se asigna solo la primera vez que se genera y queda guardado en la pestaña `FACTURAS`. Si solo quieres ver el diseño, entra directo a `https://lucyboutique.vercel.app/factura` y elige el pedido.
+El PDF se arma con `html2canvas` + `jsPDF` (los dos están guardados en `assets/`), no con `html2pdf`, porque html2pdf usa un Web Worker que en algunos navegadores deja la página **en blanco**.
 
-El generador de PDF (`html2pdf.bundle.min.js`) está guardado en `assets/`, así que el facturador funciona sin internet.
+El número de factura (`LB-0001`, `LB-0002`…) se asigna solo la primera vez que se genera y queda guardado en la pestaña `FACTURAS`.
+
+### Factura manual (venta por aparte)
+
+En la sección **Facturas emitidas** del panel está el botón **＋ Factura manual**. Sirve para vender sin que el pedido venga de la landing: pones los datos de la clienta, agregas los productos (con cantidad y precio) y se genera la factura con su número. **Queda guardada en la base de datos de ventas**: cuenta en "Ventas confirmadas", en "Cobrado" y en las ganancias del panel.
+
+### Sesión: ya no pide contraseña en la factura
+
+El panel guarda la clave en una **cookie** (`lucy_panel_key`), no solo en la sesión. Por eso, si ya estás dentro del panel, al abrir la factura **no te pide la contraseña** en ninguna pestaña ni en el celular.
 
 ### Las pestañas de la hoja
 
 | Pestaña | Contenido |
 | --- | --- |
 | `PEDIDOS` | Los pedidos (mismas columnas de siempre, no se tocan) |
-| `INVENTARIO` | Stock por color y talla (se recalcula sola) |
+| `PRODUCTOS` | Catálogo de productos |
+| `INVENTARIO` | Stock por producto, color y talla (se recalcula sola) |
 | `MOVIMIENTOS` | Libro de entradas y salidas: INICIAL, COMPRA, AJUSTE, PEDIDO, DEVOLUCION |
 | `GASTOS` | Empaques, pauta, transporte y demás salidas de dinero |
-| `FACTURAS` | Facturas emitidas con su número consecutivo |
+| `FACTURAS` | Facturas emitidas (de pedido y manuales) con su número consecutivo |
+
 
 
 Las pestañas se crean solas la primera vez que se abre el panel.

@@ -103,10 +103,15 @@ main{padding:22px 0 60px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
 /* ---------- tallas ---------- */
-.sz-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.sz-grid label{display:block;font-size:.62rem;font-weight:900;letter-spacing:.08em;color:var(--muted);text-align:center;margin-bottom:4px}
-.sz-grid input{width:100%;padding:9px 2px;border-radius:10px;border:1px solid #4d3d4e;background:#0d0c11;color:#fff;text-align:center;font-weight:900}
-.sz-grid input:focus{border-color:var(--pink);outline:none;box-shadow:0 0 0 3px #ef5d9126}
+.grp-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:9px}
+.grp{padding:9px 16px;border-radius:12px;border:1.5px solid var(--line);background:#0d0c11;color:var(--soft);font-size:.85rem;font-weight:900;transition:.15s}
+.grp:hover{border-color:var(--pink);color:#fff}
+.grp.on{background:linear-gradient(120deg,var(--pink),var(--pink-deep));border-color:var(--pink);color:#fff;box-shadow:0 6px 14px #ef5d9140}
+.sz-box{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:7px;margin-bottom:7px}
+.sz-in-wrap{display:grid;gap:4px;text-align:center}
+.sz-in-wrap span{font-size:.62rem;font-weight:900;letter-spacing:.1em;color:var(--muted)}
+.sz-in-wrap input{padding:9px 2px;border-radius:10px;border:1px solid #4d3d4e;background:#0d0c11;color:#fff;text-align:center;font-weight:900}
+.sz-in-wrap input:focus{border-color:var(--pink);outline:none;box-shadow:0 0 0 3px #ef5d9126}
 .sz{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;flex:1 1 0;min-width:0;padding:6px 2px;border-radius:10px;border:1px solid var(--line);background:#ffffff0a;line-height:1.05}
 .sz b{font-size:.58rem;font-weight:900;letter-spacing:.06em;color:var(--muted)}
 .sz span{font-size:1rem;font-weight:900}
@@ -115,6 +120,9 @@ main{padding:22px 0 60px}
 .sz.zero{opacity:.5}
 .sz.neg{border-color:var(--red);background:#ff5c8a1f}.sz.neg span{color:#ffa5bf}
 .sz-row{display:flex;gap:4px;margin-top:9px}
+.prod-tabs{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
+.prod-tab{padding:7px 14px;border-radius:999px;border:1.5px solid var(--line);background:#0d0c11;color:var(--soft);font-size:.8rem;font-weight:900}
+.prod-tab.on{background:linear-gradient(120deg,var(--pink),var(--pink-deep));border-color:var(--pink);color:#fff}
 .sz-sum{font-size:.74rem;color:var(--muted);margin-top:6px}
 
 /* ---------- tablas ---------- */
@@ -234,25 +242,32 @@ tbody tr:hover{background:#ffffff07}
       <div class="forms">
         <form class="form-card" id="formCompra">
           <h3>🛍️ Registrar compra</h3>
-          <p>Entradas de mercadería por color. Si llenas las tallas, el stock se separa por talla.</p>
-          <div class="field">
-            <label for="cColor">Color</label>
-            <select id="cColor" required></select>
+          <p>Entradas de mercadería. Elige el grupo de tallas y se suman solas.</p>
+          <div class="row2">
+            <div class="field">
+              <label for="cProducto">Producto</label>
+              <select id="cProducto" required></select>
+            </div>
+            <div class="field">
+              <label for="cColor">Color</label>
+              <select id="cColor" required></select>
+            </div>
           </div>
           <div class="row2">
             <div class="field">
-              <label for="cCantidad">Cantidad (sets)</label>
+              <label for="cCantidad" id="cCantidadLbl">Cantidad (sets)</label>
               <input id="cCantidad" type="number" min="1" step="1" value="2" required>
             </div>
             <div class="field">
               <label for="cCosto">Costo por set ($)</label>
-              <input id="cCosto" type="number" min="0" step="100" value="0" required>
+              <input id="cCosto" type="number" min="0" step="100" value="35000" required>
             </div>
           </div>
           <div class="field">
-            <label>Desglose por talla (opcional)</label>
-            <div class="sz-grid" id="cTallas"></div>
-            <small class="muted" id="cTallasHint">Déjalo vacío si la compra no tiene tallas definidas.</small>
+            <label>Grupo de tallas</label>
+            <div class="grp-chips" id="cGrupos"></div>
+            <div class="sz-box" id="cSzBox"></div>
+            <small class="muted" id="cTallasHint">Si no eliges grupo, la entrada queda sin desglose de talla.</small>
           </div>
           <div class="field">
             <label for="cDetalle">Proveedor / nota</label>
@@ -266,23 +281,27 @@ tbody tr:hover{background:#ffffff07}
           <p>Corrige el conteo real (merma, pérdida, corrección de bodega).</p>
           <div class="row2">
             <div class="field">
-              <label for="aColor">Color</label>
-              <select id="aColor" required></select>
+              <label for="aProducto">Producto</label>
+              <select id="aProducto" required></select>
             </div>
             <div class="field">
-              <label for="aTalla">Talla</label>
-              <select id="aTalla" required></select>
+              <label for="aColor">Color</label>
+              <select id="aColor" required></select>
             </div>
           </div>
           <div class="row2">
             <div class="field">
+              <label for="aTalla">Talla</label>
+              <select id="aTalla" required></select>
+            </div>
+            <div class="field">
               <label for="aCantidad">Cantidad (+ o −)</label>
               <input id="aCantidad" type="number" step="1" value="-1" required>
             </div>
-            <div class="field">
-              <label for="aCosto">Costo por set ($)</label>
-              <input id="aCosto" type="number" min="0" step="100" value="0" required>
-            </div>
+          </div>
+          <div class="field">
+            <label for="aCosto">Costo por set ($)</label>
+            <input id="aCosto" type="number" min="0" step="100" value="0" required>
           </div>
           <div class="field">
             <label for="aDetalle">Motivo</label>
@@ -322,6 +341,7 @@ tbody tr:hover{background:#ffffff07}
         <div class="spacer"></div>
         <span class="badge pink" id="invTotal"></span>
       </div>
+      <div class="prod-tabs" id="prodTabs"></div>
       <div class="inv-grid" id="invGrid"></div>
     </section>
 
@@ -359,7 +379,7 @@ tbody tr:hover{background:#ffffff07}
       <div class="table-wrap scroll">
         <table>
           <thead><tr>
-            <th>Fecha</th><th>Tipo</th><th>Color</th><th>Talla</th><th class="num">Sets</th>
+            <th>Fecha</th><th>Tipo</th><th>Producto</th><th>Color</th><th>Talla</th><th class="num">Sets</th>
             <th class="num">Costo unitario</th><th class="num">Total</th><th>Detalle</th><th></th>
           </tr></thead>
           <tbody id="comprasBody"></tbody>
@@ -402,6 +422,7 @@ tbody tr:hover{background:#ffffff07}
           <p class="muted">Desde la tabla de pedidos puedes generar y descargar la factura en PDF.</p>
         </div>
         <div class="spacer"></div>
+        <a class="btn sm" style="background:linear-gradient(135deg,var(--gold),#a8801f);color:#2a1c02;text-decoration:none" href="factura.html?nueva=1" target="_blank" rel="noopener">＋ Factura manual</a>
         <span class="badge pink" id="facTotal"></span>
       </div>
       <div class="table-wrap scroll">
@@ -427,7 +448,7 @@ tbody tr:hover{background:#ffffff07}
       <div class="table-wrap scroll">
         <table>
           <thead><tr>
-            <th>Fecha</th><th>Tipo</th><th>Color</th><th>Talla</th><th class="num">Cantidad</th>
+            <th>Fecha</th><th>Tipo</th><th>Producto</th><th>Color</th><th>Talla</th><th class="num">Cantidad</th>
             <th class="num">Costo unitario</th><th class="num">Total</th><th>Detalle</th><th></th>
           </tr></thead>
           <tbody id="movBody"></tbody>
@@ -443,7 +464,14 @@ tbody tr:hover{background:#ffffff07}
 (function(){
   'use strict';
 
-  var KEY = sessionStorage.getItem('lucy_panel_key') || '';
+  var KEY = sessionStorage.getItem('lucy_panel_key') || leerCookie_('lucy_panel_key') || '';
+  function leerCookie_(n){
+    var m = document.cookie.match(new RegExp('(?:^|; )'+n+'=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function guardarCookie_(v){
+    document.cookie = 'lucy_panel_key='+encodeURIComponent(v)+';path=/;max-age=2592000;samesite=lax';
+  }
   var DATA = null;
   var COLOR_HEX = {Rosa:'#f4b9cd',Negro:'#2b292c',Blanco:'#efedea',Gris:'#9c9ca2','Café':'#8d6a4c',Chocolate:'#4a3630'};
 
@@ -488,6 +516,7 @@ tbody tr:hover{background:#ffffff07}
     KEY = val;
     api(null, null).then(function(){
       sessionStorage.setItem('lucy_panel_key', val);
+      guardarCookie_(val);
       $('#login').style.display = 'none';
       $('#app').classList.add('on');
       return cargar();
@@ -525,7 +554,7 @@ tbody tr:hover{background:#ffffff07}
     $('#updatedAt').textContent = 'Actualizado ' + new Date(DATA.generado).toLocaleString('es-CO');
 
     var kpis = [
-      { b:'Ventas confirmadas', v:money(t.ventas), s:(t.confirmados||0)+' pedidos · '+(t.unidades||0)+' sets', c:'good' },
+      { b:'Ventas confirmadas', v:money(t.ventas), s:(t.confirmados||0)+' pedidos'+(t.ventasManuales?' + '+money(t.ventasManuales)+' manuales':''), c:'good' },
       { b:'Por cobrar', v:money(t.ventasPendientes), s:(t.pendientes||0)+' pedidos sin confirmar', c:'warn' },
       { b:'Ganancia bruta', v:money(t.utilidadBruta), s:'Ventas − costo de la mercadería', c:(t.utilidadBruta>=0?'good':'bad') },
       { b:'Ganancia neta', v:money(t.utilidadNeta), s:'Bruta − gastos del negocio', c:(t.utilidadNeta>=0?'good':'bad') },
@@ -550,11 +579,16 @@ tbody tr:hover{background:#ffffff07}
   function colorHex(c){ return COLOR_HEX[c] || '#6b5a6e'; }
 
   function pintarInventario(){
-    var colores = DATA.inventarioColor || [];
-    var tallas = DATA.tallas || ['XS','S','M','L','XL'];
+    var todos = DATA.inventarioColor || [];
+    var colores = todos.filter(function(i){ return !productoActivo || i.producto === productoActivo; });
+    var tallas = DATA.tallas || ['S','M','L','XL'];
     var totalSets = 0, totalValor = 0;
-    colores.forEach(function(i){ totalSets += i.stock; totalValor += i.valor; });
+    todos.forEach(function(i){ totalSets += i.stock; totalValor += i.valor; });
     $('#invTotal').textContent = totalSets+' sets · '+money(totalValor);
+    if(!colores.length){
+      $('#invGrid').innerHTML = '<div class="empty">Sin movimientos para este producto</div>';
+      return;
+    }
     $('#invGrid').innerHTML = colores.map(function(i){
       var badge = '';
       if(i.alerta === 'negativo') badge = '<span class="badge neg">Faltante</span>';
@@ -628,11 +662,12 @@ tbody tr:hover{background:#ffffff07}
     var total = 0;
     rows.forEach(function(r){ total += r.total; });
     $('#comprasTotal').textContent = money(total);
-    if(!rows.length){ $('#comprasBody').innerHTML = '<tr><td colspan="9" class="empty">Todavía no hay compras registradas</td></tr>'; return; }
+    if(!rows.length){ $('#comprasBody').innerHTML = '<tr><td colspan="10" class="empty">Todavía no hay compras registradas</td></tr>'; return; }
     $('#comprasBody').innerHTML = rows.map(function(r){
       return '<tr>'
         + '<td class="muted">'+esc(r.fecha)+'</td>'
         + '<td>'+tipoPill(r.tipo)+'</td>'
+        + '<td class="muted">'+esc(r.producto||'')+'</td>'
         + '<td>'+esc(r.color)+'</td>'
         + '<td>'+(r.talla?'<span class="pill">'+esc(r.talla)+'</span>':'<span class="muted">—</span>')+'</td>'
         + '<td class="num strong">'+r.cantidad+'</td>'
@@ -696,8 +731,9 @@ tbody tr:hover{background:#ffffff07}
     if(!rows.length){ $('#facBody').innerHTML = '<tr><td colspan="7" class="empty">Todavía no has facturado ningún pedido</td></tr>'; return; }
     $('#facBody').innerHTML = rows.map(function(r){
       var cls = r.estado === 'pagada' ? 'pagado' : (r.estado === 'anulada' ? 'cancelado' : 'pendiente');
+      var tipo = r.manual ? ' <span class="badge pink">Manual</span>' : '';
       return '<tr>'
-        + '<td class="strong">'+esc(r.numero)+'</td>'
+        + '<td class="strong">'+esc(r.numero)+tipo+'</td>'
         + '<td class="muted">'+esc(r.fecha)+'</td>'
         + '<td class="muted">'+esc(r.referencia)+'</td>'
         + '<td>'+esc(r.clienta)+'</td>'
@@ -718,12 +754,13 @@ tbody tr:hover{background:#ffffff07}
 
   function pintarMovimientos(){
     var rows = DATA.movimientos || [];
-    if(!rows.length){ $('#movBody').innerHTML = '<tr><td colspan="9" class="empty">Sin movimientos todavía</td></tr>'; return; }
+    if(!rows.length){ $('#movBody').innerHTML = '<tr><td colspan="10" class="empty">Sin movimientos todavía</td></tr>'; return; }
     $('#movBody').innerHTML = rows.map(function(r){
       var signo = (r.tipo==='PEDIDO'||r.cantidad<0) ? '' : '+';
       return '<tr>'
         + '<td class="muted">'+esc(r.fecha)+'</td>'
         + '<td>'+tipoPill(r.tipo)+'</td>'
+        + '<td class="muted">'+esc(r.producto||'')+'</td>'
         + '<td>'+esc(r.color)+'</td>'
         + '<td>'+(r.talla?'<span class="pill">'+esc(r.talla)+'</span>':'<span class="muted">—</span>')+'</td>'
         + '<td class="num strong">'+signo+r.cantidad+'</td>'
@@ -744,27 +781,104 @@ tbody tr:hover{background:#ffffff07}
     });
   }
 
+  /* ---------------- tallas por grupo ---------------- */
+  var GRUPOS = { SM:['S','M'], LX:['L','XL'] };
+  var GRUPOS_TXT = { SM:'S + M', LX:'L + XL' };
+  var gruposSel = [];
+  var productoActivo = '';
+
+  function tallasDeGrupos(){
+    var out = [];
+    gruposSel.forEach(function(g){ out = out.concat(GRUPOS[g] || []); });
+    return out;
+  }
+
+  function renderGrupos(){
+    var tallas = DATA.tallas || ['S','M','L','XL'];
+    var boxes = [];
+    var usados = {};
+    tallas.forEach(function(t){ usados[t] = true; });
+    Object.keys(GRUPOS).forEach(function(g){
+      var completo = GRUPOS[g].every(function(t){ return usados[t]; });
+      if(!completo) return;
+      boxes.push('<button type="button" class="grp'+(gruposSel.indexOf(g)>=0?' on':'')+'" data-grp="'+g+'">'+(GRUPOS_TXT[g]||g)+'</button>');
+    });
+    $('#cGrupos').innerHTML = boxes.join('') || '<span class="muted" style="font-size:.78rem">No hay grupos disponibles</span>';
+    $$('#cGrupos .grp').forEach(function(b){
+      b.addEventListener('click', function(){
+        var g = b.getAttribute('data-grp');
+        var i = gruposSel.indexOf(g);
+        if(i >= 0) gruposSel.splice(i,1); else gruposSel.push(g);
+        renderGrupos();
+        renderSzBox();
+      });
+    });
+  }
+
+  function renderSzBox(){
+    var sel = tallasDeGrupos();
+    var previos = {};
+    $$('#cSzBox input').forEach(function(i){ previos[i.getAttribute('data-talla')] = i.value; });
+    if(!sel.length){
+      $('#cSzBox').innerHTML = '';
+      $('#cCantidadLbl').textContent = 'Cantidad (sets)';
+      $('#cTallasHint').textContent = 'Si no eliges grupo, la entrada queda sin desglose de talla.';
+      return;
+    }
+    $('#cCantidadLbl').textContent = 'Cantidad por talla';
+    $('#cSzBox').innerHTML = sel.map(function(t){
+      var v = (previos[t] !== undefined && previos[t] !== '') ? previos[t] : ($('#cCantidad').value || '0');
+      return '<label class="sz-in-wrap"><span>'+t+'</span><input type="number" min="0" step="1" data-talla="'+t+'" value="'+v+'"></label>';
+    }).join('');
+    $$('#cSzBox input').forEach(function(i){ i.addEventListener('input', actualizarResumenTallas); });
+    actualizarResumenTallas();
+  }
+
+  function actualizarResumenTallas(){
+    var sel = tallasDeGrupos();
+    if(!sel.length) return;
+    var partes = [], total = 0;
+    sel.forEach(function(t){
+      var inp = $('#cSzBox input[data-talla="'+t+'"]');
+      var v = inp ? (Number(inp.value)||0) : 0;
+      total += v;
+      if(v) partes.push(t+': '+v);
+    });
+    $('#cTallasHint').innerHTML = partes.length
+      ? 'Se guardarán <b>'+total+'</b> set(s) &nbsp;('+partes.join(' · ')+'). Puedes cambiar cada número.'
+      : 'Ponle la cantidad a cada talla del grupo.';
+  }
+
   function llenarSelects(){
     var cols = DATA.colores || [];
-    var tallas = DATA.tallas || ['XS','S','M','L','XL'];
+    var tallas = DATA.tallas || ['S','M','L','XL'];
+    var prods = DATA.productos || [];
     if($('#cColor').options.length === cols.length) return;
-    var opts = cols.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
-    $('#cColor').innerHTML = opts;
-    $('#aColor').innerHTML = opts;
+    $('#cColor').innerHTML = cols.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
+    $('#aColor').innerHTML = cols.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
     $('#aTalla').innerHTML = '<option value="">Sin desglose</option>' + tallas.map(function(t){ return '<option value="'+esc(t)+'">'+esc(t)+'</option>'; }).join('');
+    var popts = prods.map(function(p){ return '<option value="'+esc(p.nombre)+'">'+esc(p.nombre)+'</option>'; }).join('') + '<option value="__nuevo__">➕ Agregar producto…</option>';
+    $('#cProducto').innerHTML = popts;
+    $('#aProducto').innerHTML = prods.map(function(p){ return '<option value="'+esc(p.nombre)+'">'+esc(p.nombre)+'</option>'; }).join('');
     var cats = DATA.categorias || [];
     $('#gCategoria').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
-    // grilla de tallas de la compra
-    $('#cTallas').innerHTML = tallas.map(function(t){
-      return '<label>'+esc(t)+'<input type="number" min="0" step="1" data-talla="'+esc(t)+'" class="sz-in" value=""></label>';
+    renderGrupos();
+    renderSzBox();
+    renderProdTabs();
+  }
+
+  function renderProdTabs(){
+    var prods = DATA.productos || [];
+    if(!prods.length) return;
+    if(!productoActivo || !prods.some(function(p){ return p.nombre === productoActivo; })) productoActivo = prods[0].nombre;
+    $('#prodTabs').innerHTML = prods.map(function(p){
+      return '<button type="button" class="prod-tab'+(p.nombre===productoActivo?' on':'')+'" data-prod="'+esc(p.nombre)+'">'+esc(p.nombre)+'</button>';
     }).join('');
-    $$('.sz-in').forEach(function(i){
-      i.addEventListener('input', function(){
-        var suma = 0;
-        $$('.sz-in').forEach(function(x){ suma += Number(x.value)||0; });
-        var hint = $('#cTallasHint');
-        if(suma) hint.textContent = 'Total por tallas: ' + suma + ' set(s).';
-        else hint.textContent = 'Déjalo vacío si la compra no tiene tallas definidas.';
+    $$('#prodTabs .prod-tab').forEach(function(b){
+      b.addEventListener('click', function(){
+        productoActivo = b.getAttribute('data-prod');
+        renderProdTabs();
+        pintarInventario();
       });
     });
   }
@@ -772,24 +886,39 @@ tbody tr:hover{background:#ffffff07}
   /* ---------------- formularios ---------------- */
   $('#formCompra').addEventListener('submit', function(e){
     e.preventDefault();
+    var producto = $('#cProducto').value;
+    if(producto === '__nuevo__'){
+      var nombre = prompt('Nombre del nuevo producto:');
+      if(!nombre){ return; }
+      api('save_product', { action:'save_product', nombre: nombre })
+        .then(function(j){
+          productoActivo = j.nombre;
+          toast('Producto agregado: '+j.nombre, 'ok');
+          return cargar();
+        })
+        .catch(function(err){ toast(err.message, 'err'); });
+      return;
+    }
     var cantidad = Number($('#cCantidad').value)||0;
     var tallas = {};
     var suma = 0;
-    $$('.sz-in').forEach(function(x){ var v = Number(x.value)||0; if(v) tallas[x.getAttribute('data-talla')] = v; suma += v; });
-    if(suma && suma !== cantidad){
-      toast('El desglose por talla ('+suma+') no suma la cantidad ('+cantidad+').','err');
-      return;
-    }
+    $$('#cSzBox input').forEach(function(x){
+      var v = Number(x.value)||0;
+      if(v) tallas[x.getAttribute('data-talla')] = v;
+      suma += v;
+    });
+    // Con grupo de tallas la cantidad es por talla: el total es la suma.
+    if(suma) cantidad = suma;
     var payload = {
-      action:'save_movement', tipo:'COMPRA', color:$('#cColor').value,
+      action:'save_movement', tipo:'COMPRA', producto:producto, color:$('#cColor').value,
       cantidad: cantidad, costoUnitario:Number($('#cCosto').value),
       detalle:$('#cDetalle').value
     };
     if(suma) payload.tallas = tallas;
     api('save_movement', payload).then(function(){
       $('#cDetalle').value = '';
-      $$('.sz-in').forEach(function(x){ x.value=''; });
-      toast(suma ? 'Compra guardada con desglose de tallas' : 'Compra guardada', 'ok');
+      $$('#cSzBox input').forEach(function(x){ x.value = ''; });
+      toast(suma ? 'Compra guardada ('+suma+' sets por talla)' : 'Compra guardada', 'ok');
       return cargar();
     }).catch(function(err){ toast(err.message, 'err'); });
   });
@@ -797,7 +926,7 @@ tbody tr:hover{background:#ffffff07}
   $('#formAjuste').addEventListener('submit', function(e){
     e.preventDefault();
     api('save_movement', {
-      action:'save_movement', tipo:'AJUSTE', color:$('#aColor').value, talla:$('#aTalla').value,
+      action:'save_movement', tipo:'AJUSTE', producto:$('#aProducto').value, color:$('#aColor').value, talla:$('#aTalla').value,
       cantidad:Number($('#aCantidad').value), costoUnitario:Number($('#aCosto').value),
       detalle:$('#aDetalle').value
     }).then(function(){

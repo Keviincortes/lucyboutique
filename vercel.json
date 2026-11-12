@@ -4,6 +4,7 @@
   "rewrites": [
     { "source": "/vbpx964ox465z692oh8eid8lgcuq2w.html", "destination": "/api/verify" },
     { "source": "/politica", "destination": "/politica.html" },
-    { "source": "/terminos", "destination": "/terminos.html" }
+    { "source": "/terminos", "destination": "/terminos.html" },
+    { "source": "/panel", "destination": "/panel.html" }
   ]
 }

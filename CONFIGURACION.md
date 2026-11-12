@@ -10,6 +10,52 @@ La landing calcula el pedido, intenta registrarlo en Google Sheets y abre WhatsA
 
 Para registrar pedidos automáticamente, el sitio necesita el Web App gratuito de Google Apps Script. No es seguro ni correcto poner secretos de Google o WhatsApp en `index.html`.
 
+## Panel de administración (inventario, compras, gastos)
+
+**URL: https://lucyboutique.vercel.app/panel**
+**Clave: `LucyBoutique2026`**
+
+Ahí se maneja todo el negocio:
+
+- **Resumen**: ventas confirmadas, por cobrar, ganancia bruta, ganancia neta, valor del inventario, invertido en compras, gastos y cobrado.
+- **Registrar compra**: entra mercadería por color (ej. "compré 2 negras a $32.000") y se suma al stock.
+- **Ajustar inventario**: corrige el conteo real (merma, pérdida) con cantidad positiva o negativa.
+- **Registrar gasto**: empaques, pauta publicitaria, transporte y gasolina, impuestos, otros.
+- **Inventario por color**: stock actual, costo promedio, valor en bodega y avisos de stock bajo o agotado.
+- **Pedidos**: se cambia el estado (PENDIENTE COMPROBANTE → PAGADO → ENTREGADO) y el panel recalcula las ganancias al instante.
+- **Compras / Gastos / Movimientos**: historial completo con fechas y valores.
+
+### El pedido se descuenta solo
+
+Cada pedido que entra por la landing descuenta una unidad del color pedido y deja el movimiento registrado en la pestaña `MOVIMIENTOS` con su costo. El stock nunca se actualiza a mano.
+
+### Las pestañas de la hoja
+
+| Pestaña | Contenido |
+| --- | --- |
+| `PEDIDOS` | Los pedidos (mismas columnas de siempre, no se tocan) |
+| `INVENTARIO` | Foto del stock por color (se recalcula sola) |
+| `MOVIMIENTOS` | Libro de entradas y salidas: INICIAL, COMPRA, AJUSTE, PEDIDO, DEVOLUCION |
+| `GASTOS` | Empaques, pauta, transporte y demás salidas de dinero |
+
+Las pestañas se crean solas la primera vez que se abre el panel.
+
+### Seguridad
+
+- El panel pide clave; sin ella `/api/panel` responde 401.
+- La clave se valida dos veces: en Vercel (`PANEL_PASSWORD`) y en Apps Script (propiedad `PANEL_KEY`). Deben ser iguales.
+- Para cambiarla: en Vercel `Settings > Environment Variables > PANEL_PASSWORD` y en Apps Script `Configuración del proyecto > Propiedades de las secuencias de comandos > PANEL_KEY`, y redeploy.
+
+### Propiedades del script (Apps Script)
+
+| Propiedad | Valor |
+| --- | --- |
+| `SHEET_ID` | `1g0AnVlGgD7v-JZXOMbPjKa1GVQq8IxSA35sXvQabP3k` |
+| `PANEL_KEY` | la clave de administración del panel |
+| `OWNER_EMAIL` | correo para el aviso de pedido nuevo (opcional) |
+
+Variables de entorno en Vercel (producción): `PANEL_PASSWORD`, `APPS_SCRIPT_URL`, `META_CAPI_TOKEN`, `META_PIXEL_ID`, `META_CAPI_SECRET`, `META_API_VERSION`.
+
 ## 1. Crear el Google Sheet
 
 1. Crea un archivo llamado `PEDIDOS LUCY BOUTIQUE`.
@@ -53,6 +99,22 @@ No hay que poner claves de Wompi ni de WhatsApp. El número de WhatsApp está co
 3. Verifica la fila en Google Sheets y el correo opcional.
 4. Comprueba que el mensaje de WhatsApp se abre con los datos correctos.
 5. Envía un comprobante de prueba y cambia manualmente el estado en Sheets.
+
+## Publicar cambios del script de Google
+
+El código vive en `apps-script/Code.gs`. Cada vez que se cambia hay que:
+
+1. Pegar el contenido en `Código.gs` del proyecto de Apps Script y **guardar** (icono del disquete). Si no se guarda, el despliegue sigue con el código viejo.
+2. `Implementar > Nueva implementación > App web` con la misma configuración:
+   - Descripción: por ejemplo "Inventario, compras, gastos y panel".
+   - Ejecutar como: **Yo (lachimbahijueputa@gmail.com)**.
+   - Usuarios con acceso: **Cualquiera** (las clientas tienen que poder dejar su pedido).
+3. Copiar la URL `/exec` nueva y ponerla en los dos sitios:
+   - `CONFIG.orderEndpoint` en `index.html`.
+   - `APPS_SCRIPT_URL` en las variables de entorno de Vercel.
+4. `vercel --prod --yes` para publicar.
+
+La URL `/exec` es la misma para siempre mientras no se cree una implementación nueva: por eso conviene guardarla en un solo lugar.
 
 ## Meta Pixel y API de Conversiones
 

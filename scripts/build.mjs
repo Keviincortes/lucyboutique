@@ -12,7 +12,7 @@ const pixelId = process.env.VITE_META_PIXEL_ID || '1441414194212741';
 html = html.replaceAll('1441414194212741', pixelId);
 await writeFile(`${dist}/index.html`, html, 'utf8');
 
-for (const page of ['politica.html', 'terminos.html']) {
+for (const page of ['politica.html', 'terminos.html', 'panel.html']) {
   if (existsSync(`${root}/${page}`)) {
     await cp(`${root}/${page}`, `${dist}/${page}`);
   }

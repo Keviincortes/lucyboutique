@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Panel de administración · Lucy Boutique</title>
+<link rel="icon" href="assets/logo-160.webp" type="image/webp">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+:root{
+  --pink:#ef5d91;--pink-light:#ffb5ce;--pink-deep:#b92c63;--gold:#ffd371;
+  --text:#f7eff5;--muted:#b6a4ba;--line:rgba(255,255,255,.11);
+  --panel:linear-gradient(160deg,#19141f,#100e15);
+  --green:#2fdc7a;--red:#ff5c8a;--amber:#ffb347;--blue:#6fb4ff;
+}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(circle at 10% 0,#7d214b55 0,transparent 31%),radial-gradient(circle at 92% 17%,#5c236255 0,transparent 25%),linear-gradient(145deg,#06070b,#130c16 48%,#07070b);color:var(--text);font-family:Nunito,Arial,sans-serif;line-height:1.45;min-height:100vh;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;z-index:-1;opacity:.4;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(#000,transparent 72%)}
+.wrap{width:min(1220px,94%);margin:auto}
+h1,h2,h3{margin:0;line-height:1.1}
+a{color:inherit}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input,select,textarea{font:inherit}
+
+/* ---------- login ---------- */
+#login{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login-card{width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:30px 26px;box-shadow:0 26px 70px #0009;text-align:center}
+.login-card img{width:66px;height:66px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
+.login-card h1{font-family:Pacifico,cursive;color:var(--pink-light);font-size:2.1rem;margin:14px 0 6px}
+.login-card p{color:var(--muted);margin:0 0 20px;font-size:.94rem}
+.field{display:grid;gap:6px;text-align:left}
+.field label{font-size:.76rem;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select,.field textarea{width:100%;padding:13px;border-radius:12px;border:1px solid #4d3d4e;background:#0d0c11;color:#fff;outline:none}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--pink);box-shadow:0 0 0 3px #ef5d9126}
+.err{color:var(--red);font-size:.8rem;font-weight:800;min-height:1em;margin-top:8px}
+
+/* ---------- botones ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:14px;font-weight:900;background:linear-gradient(135deg,var(--pink),var(--pink-deep));color:#fff;box-shadow:0 12px 26px #ef5d9140;transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-2px);box-shadow:0 16px 32px #ef5d9155}
+.btn:disabled{opacity:.6;transform:none;box-shadow:none}
+.btn.ghost{background:#ffffff10;border:1px solid var(--line);box-shadow:none;color:var(--text)}
+.btn.sm{min-height:38px;padding:0 14px;font-size:.84rem;border-radius:11px}
+.btn.danger{background:linear-gradient(135deg,#ff5c8a,#a81f4d);box-shadow:0 10px 22px #ff5c8a33}
+
+/* ---------- cabecera ---------- */
+header.top{position:sticky;top:0;z-index:20;background:#0e0c13e8;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.top-inner{display:flex;align-items:center;gap:14px;padding:12px 0}
+.top img{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid var(--gold)}
+.top h1{font-family:Pacifico,cursive;color:var(--pink-light);font-size:1.5rem;white-space:nowrap}
+.top small{display:block;color:var(--muted);font-size:.7rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+.top-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* ---------- secciones ---------- */
+main{padding:22px 0 60px}
+.sec{margin-top:26px}
+.sec-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.eyebrow{color:var(--pink-light);font-size:.74rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+.sec h2{font-size:1.6rem;letter-spacing:-.02em}
+.sec-head .muted{color:var(--muted);font-size:.86rem;margin:4px 0 0}
+.spacer{margin-left:auto}
+
+/* ---------- tarjetas KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:15px 16px;box-shadow:0 14px 32px #0006}
+.kpi::after{content:"";position:absolute;inset:auto -30% -60% auto;width:150px;height:150px;border-radius:50%;background:var(--glow,#ef5d9122);filter:blur(10px)}
+.kpi b{display:block;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kpi strong{display:block;font-size:1.85rem;line-height:1.1;margin-top:6px;letter-spacing:-.02em}
+.kpi small{display:block;color:var(--muted);font-size:.76rem;margin-top:4px}
+.kpi.good strong{color:var(--green)}
+.kpi.bad strong{color:var(--red)}
+.kpi.warn strong{color:var(--amber)}
+.kpi.info strong{color:var(--blue)}
+
+/* ---------- inventario ---------- */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.inv-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 14px 30px #0006;position:relative;overflow:hidden}
+.inv-card .swatch{width:38px;height:38px;border-radius:11px;border:2px solid #ffffff2e;box-shadow:inset 0 1px #fff4}
+.inv-top{display:flex;align-items:center;gap:10px}
+.inv-top strong{font-size:1.05rem}
+.inv-num{display:flex;align-items:baseline;gap:6px;margin:10px 0 2px}
+.inv-num b{font-size:2.1rem;line-height:1}
+.inv-num span{color:var(--muted);font-size:.8rem;font-weight:800}
+.bar{height:8px;border-radius:99px;background:#ffffff14;overflow:hidden;margin:10px 0 8px}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--pink),var(--gold))}
+.inv-meta{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:.76rem}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:900;padding:3px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.06em}
+.badge.ok{background:#2fdc7a22;color:#8dffb8}
+.badge.low{background:#ffb34726;color:#ffcf8a}
+.badge.out{background:#ff5c8a26;color:#ffa5bf}
+.badge.neg{background:#ff5c8a33;color:#ffb0c4}
+.badge.pink{background:#ef5d9126;color:var(--pink-light)}
+
+/* ---------- formularios ---------- */
+.forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.form-card{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 16px 36px #00000059}
+.form-card h3{font-size:1.08rem;margin-bottom:4px}
+.form-card>p{color:var(--muted);font-size:.82rem;margin:0 0 14px}
+.form-card .field{margin-bottom:11px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ---------- tablas ---------- */
+.table-wrap{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 16px 36px #00000059}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.86rem;min-width:640px}
+th{text-align:left;font-size:.68rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 14px;background:#ffffff08;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid #ffffff0a;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#ffffff07}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.strong{font-weight:900}
+.muted{color:var(--muted)}
+.pill{display:inline-block;font-size:.72rem;font-weight:900;padding:3px 10px;border-radius:99px;background:#ffffff12;white-space:nowrap}
+.pill.pendiente{background:#ffb34726;color:#ffcf8a}
+.pill.pagado{background:#2fdc7a22;color:#8dffb8}
+.pill.entregado{background:#6fb4ff26;color:#a9d3ff}
+.pill.cancelado{background:#ff5c8a26;color:#ffa5bf}
+.icon-btn{width:32px;height:32px;border-radius:9px;background:#ff5c8a1f;color:#ffa5bf;display:grid;place-items:center;font-weight:900}
+.icon-btn:hover{background:#ff5c8a3d}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+
+/* ---------- barras de gastos ---------- */
+.cat-list{display:grid;gap:10px}
+.cat{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center}
+.cat .bar{grid-column:1/-1;margin:0}
+.cat b{font-size:.88rem}
+.cat span{color:var(--muted);font-size:.84rem;font-variant-numeric:tabular-nums}
+
+/* ---------- toast ---------- */
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,120%);z-index:50;background:#1c1622;border:1px solid var(--line);border-left:4px solid var(--pink);color:#fff;padding:13px 18px;border-radius:14px;box-shadow:0 18px 40px #000b;font-weight:800;max-width:min(460px,92vw);transition:transform .32s cubic-bezier(.2,.9,.3,1.2)}
+#toast.show{transform:translate(-50%,0)}
+#toast.err{border-left-color:var(--red)}
+#toast.ok{border-left-color:var(--green)}
+
+/* ---------- login bloquea el panel ---------- */
+#app{display:none}
+#app.on{display:block}
+
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #ffffff44;border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+@media(max-width:820px){
+  .top h1{font-size:1.2rem}
+  .top img{width:38px;height:38px}
+  .kpi strong{font-size:1.6rem}
+  .sec h2{font-size:1.35rem}
+  .row2{grid-template-columns:1fr}
+}
+@media(max-width:520px){
+  .wrap{width:min(1220px,93%)}
+  .top-inner{padding:10px 0}
+  .kpis{grid-template-columns:1fr 1fr;gap:9px}
+  .kpi{padding:12px 13px;border-radius:15px}
+  .kpi strong{font-size:1.35rem}
+  .kpi b{font-size:.64rem}
+  .inv-grid{grid-template-columns:1fr 1fr;gap:9px}
+  .inv-num b{font-size:1.7rem}
+  .btn{min-height:46px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login">
+  <form class="login-card" id="loginForm" autocomplete="off">
+    <img src="assets/logo-160.webp" alt="Lucy Boutique">
+    <h1>Lucy Boutique</h1>
+    <p>Panel de administración<br>Pedidos, inventario, compras y gastos</p>
+    <div class="field">
+      <label for="pass">Clave de administración</label>
+      <input id="pass" type="password" placeholder="••••••••" autocomplete="current-password" required>
+    </div>
+    <div class="err" id="loginErr"></div>
+    <button class="btn" type="submit" id="loginBtn" style="width:100%;margin-top:10px">Entrar</button>
+  </form>
+</div>
+
+<!-- ===================== PANEL ===================== -->
+<div id="app">
+  <header class="top">
+    <div class="wrap top-inner">
+      <img src="assets/logo-160.webp" alt="Lucy Boutique">
+      <div>
+        <small>Panel de administración</small>
+        <h1>Lucy Boutique</h1>
+      </div>
+      <div class="top-actions">
+        <button class="btn ghost sm" id="refreshBtn" title="Actualizar">↻ Actualizar</button>
+        <button class="btn ghost sm" id="logoutBtn">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- KPIs -->
+    <section class="sec" style="margin-top:18px">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Resumen</div>
+          <h2 id="updatedAt">Cargando…</h2>
+        </div>
+      </div>
+      <div class="kpis" id="kpis"></div>
+    </section>
+
+    <!-- Acciones rápidas -->
+    <section class="sec">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Registrar</div>
+          <h2>Movimientos rápidos</h2>
+          <p class="muted">Todo lo que registres aquí se guarda en la hoja y se descuenta del inventario al instante.</p>
+        </div>
+      </div>
+      <div class="forms">
+        <form class="form-card" id="formCompra">
+          <h3>🛍️ Registrar compra</h3>
+          <p>Entradas de mercadería por color.</p>
+          <div class="field">
+            <label for="cColor">Color</label>
+            <select id="cColor" required></select>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="cCantidad">Cantidad (sets)</label>
+              <input id="cCantidad" type="number" min="1" step="1" value="2" required>
+            </div>
+            <div class="field">
+              <label for="cCosto">Costo por set ($)</label>
+              <input id="cCosto" type="number" min="0" step="100" value="0" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="cDetalle">Proveedor / nota</label>
+            <input id="cDetalle" placeholder="Ej. Confecciones del Norte">
+          </div>
+          <button class="btn" type="submit" style="width:100%">Guardar compra</button>
+        </form>
+
+        <form class="form-card" id="formAjuste">
+          <h3>⚖️ Ajustar inventario</h3>
+          <p>Corrige el conteo real (merma, pérdida, corrección de bodega).</p>
+          <div class="field">
+            <label for="aColor">Color</label>
+            <select id="aColor" required></select>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="aCantidad">Cantidad (+ o −)</label>
+              <input id="aCantidad" type="number" step="1" value="-1" required>
+            </div>
+            <div class="field">
+              <label for="aCosto">Costo por set ($)</label>
+              <input id="aCosto" type="number" min="0" step="100" value="0" required>
+            </div>
+          </div>
+          <div class="field">
+            <label for="aDetalle">Motivo</label>
+            <input id="aDetalle" placeholder="Ej. Una prenda dañada en bodega">
+          </div>
+          <button class="btn" type="submit" style="width:100%">Aplicar ajuste</button>
+        </form>
+
+        <form class="form-card" id="formGasto">
+          <h3>💸 Registrar gasto</h3>
+          <p>Empaques, pauta, transporte y demás salidas de dinero.</p>
+          <div class="field">
+            <label for="gCategoria">Categoría</label>
+            <select id="gCategoria" required></select>
+          </div>
+          <div class="field">
+            <label for="gDescripcion">Descripción</label>
+            <input id="gDescripcion" placeholder="Ej. Bolsas y etiquetas" required>
+          </div>
+          <div class="field">
+            <label for="gMonto">Monto ($)</label>
+            <input id="gMonto" type="number" min="1" step="500" value="0" required>
+          </div>
+          <button class="btn" type="submit" style="width:100%">Guardar gasto</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Inventario -->
+    <section class="sec">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Bodega</div>
+          <h2>Inventario por color</h2>
+          <p class="muted">Se descuenta solo cada pedido que entra por la landing.</p>
+        </div>
+        <div class="spacer"></div>
+        <span class="badge pink" id="invTotal"></span>
+      </div>
+      <div class="inv-grid" id="invGrid"></div>
+    </section>
+
+    <!-- Pedidos -->
+    <section class="sec">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Ventas</div>
+          <h2>Pedidos</h2>
+          <p class="muted">Cambia el estado cuando la clienta pague.</p>
+        </div>
+      </div>
+      <div class="table-wrap scroll">
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Referencia</th><th>Clienta</th><th>Ciudad</th>
+            <th class="num">Sets</th><th class="num">Total pedido</th><th class="num">Pagó hoy</th><th>Estado</th>
+          </tr></thead>
+          <tbody id="pedidosBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Compras -->
+    <section class="sec">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Insumos</div>
+          <h2>Compras de mercadería</h2>
+          <p class="muted">Cuándo se compró cada color y cuánto se gastó.</p>
+        </div>
+        <div class="spacer"></div>
+        <span class="badge pink" id="comprasTotal"></span>
+      </div>
+      <div class="table-wrap scroll">
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Tipo</th><th>Color</th><th class="num">Sets</th>
+            <th class="num">Costo unitario</th><th class="num">Total</th><th>Detalle</th><th></th>
+          </tr></thead>
+          <tbody id="comprasBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Gastos -->
+    <section class="sec">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Salidas de dinero</div>
+          <h2>Gastos</h2>
+        </div>
+        <div class="spacer"></div>
+        <span class="badge pink" id="gastosTotal"></span>
+      </div>
+      <div class="forms" style="margin-bottom:14px">
+        <div class="form-card">
+          <h3>Gastos por categoría</h3>
+          <div class="cat-list" id="catList"></div>
+        </div>
+      </div>
+      <div class="table-wrap scroll">
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Categoría</th><th>Descripción</th><th class="num">Monto</th><th></th>
+          </tr></thead>
+          <tbody id="gastosBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Movimientos -->
+    <section class="sec">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Bitácora</div>
+          <h2>Movimientos de inventario</h2>
+          <p class="muted">Cada entrada y salida de mercadería, con su valor.</p>
+        </div>
+      </div>
+      <div class="table-wrap scroll">
+        <table>
+          <thead><tr>
+            <th>Fecha</th><th>Tipo</th><th>Color</th><th class="num">Cantidad</th>
+            <th class="num">Costo unitario</th><th class="num">Total</th><th>Detalle</th><th></th>
+          </tr></thead>
+          <tbody id="movBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var KEY = sessionStorage.getItem('lucy_panel_key') || '';
+  var DATA = null;
+  var COLOR_HEX = {Rosa:'#f4b9cd',Negro:'#2b292c',Blanco:'#efedea',Gris:'#9c9ca2','Café':'#8d6a4c',Chocolate:'#4a3630'};
+
+  var $ = function(s){ return document.querySelector(s); };
+  var $$ = function(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); };
+
+  function money(n){
+    n = Number(n)||0;
+    return '$'+n.toLocaleString('es-CO',{maximumFractionDigits:0});
+  }
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function toast(msg,kind){
+    var t = $('#toast');
+    t.textContent = msg;
+    t.className = 'show ' + (kind||'');
+    clearTimeout(t._t);
+    t._t = setTimeout(function(){ t.className = ''; }, 3600);
+  }
+
+  function api(action, body){
+    var opt = { method: body ? 'POST' : 'GET', headers: { 'x-panel-key': KEY } };
+    if(body){ opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    return fetch('/api/panel', opt).then(function(r){
+      return r.json().then(function(j){
+        if(!r.ok || j.ok === false) throw new Error(j.error || 'Error ' + r.status);
+        return j;
+      });
+    });
+  }
+
+  /* ---------------- login ---------------- */
+  $('#loginForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    var val = $('#pass').value;
+    $('#loginErr').textContent = '';
+    $('#loginBtn').disabled = true;
+    $('#loginBtn').innerHTML = '<span class="spin"></span> Verificando';
+    KEY = val;
+    api(null, null).then(function(){
+      sessionStorage.setItem('lucy_panel_key', val);
+      $('#login').style.display = 'none';
+      $('#app').classList.add('on');
+      return cargar();
+    }).catch(function(err){
+      KEY = '';
+      $('#loginErr').textContent = err.message === 'Clave incorrecta' ? 'Clave incorrecta' : err.message;
+    }).finally(function(){
+      $('#loginBtn').disabled = false;
+      $('#loginBtn').textContent = 'Entrar';
+    });
+  });
+
+  $('#logoutBtn').addEventListener('click', function(){
+    sessionStorage.removeItem('lucy_panel_key');
+    KEY = '';
+    location.reload();
+  });
+  $('#refreshBtn').addEventListener('click', function(){ cargar(true); });
+
+  /* ---------------- carga ---------------- */
+  function cargar(manual){
+    var btn = $('#refreshBtn');
+    btn.disabled = true;
+    return api(null, null).then(function(d){
+      DATA = d;
+      pintar();
+      if(manual) toast('Datos actualizados', 'ok');
+    }).catch(function(err){
+      toast(err.message, 'err');
+    }).finally(function(){ btn.disabled = false; });
+  }
+
+  function pintar(){
+    var t = DATA.totales || {};
+    $('#updatedAt').textContent = 'Actualizado ' + new Date(DATA.generado).toLocaleString('es-CO');
+
+    var kpis = [
+      { b:'Ventas confirmadas', v:money(t.ventas), s:(t.confirmados||0)+' pedidos · '+(t.unidades||0)+' sets', c:'good' },
+      { b:'Por cobrar', v:money(t.ventasPendientes), s:(t.pendientes||0)+' pedidos sin confirmar', c:'warn' },
+      { b:'Ganancia bruta', v:money(t.utilidadBruta), s:'Ventas − costo de la mercadería', c:(t.utilidadBruta>=0?'good':'bad') },
+      { b:'Ganancia neta', v:money(t.utilidadNeta), s:'Bruta − gastos del negocio', c:(t.utilidadNeta>=0?'good':'bad') },
+      { b:'Valor del inventario', v:money(t.valorInventario), s:'Dinero parado en bodega', c:'info' },
+      { b:'Invertido en compras', v:money(t.invertido), s:'Total de mercadería comprada', c:'' },
+      { b:'Gastos', v:money(t.totalGastos), s:'Empaque, pauta, transporte…', c:'bad' },
+      { b:'Cobrado', v:money(t.cobrado), s:money(t.cobradoPendiente)+' pendiente de cobro', c:'good' }
+    ];
+    $('#kpis').innerHTML = kpis.map(function(k){
+      return '<div class="kpi '+k.c+'"><b>'+k.b+'</b><strong>'+k.v+'</strong><small>'+esc(k.s)+'</small></div>';
+    }).join('');
+
+    pintarInventario();
+    pintarPedidos();
+    pintarCompras();
+    pintarGastos();
+    pintarMovimientos();
+    llenarSelects();
+  }
+
+  function colorHex(c){ return COLOR_HEX[c] || '#6b5a6e'; }
+
+  function pintarInventario(){
+    var inv = DATA.inventario || [];
+    var max = 1;
+    inv.forEach(function(i){ if(i.stock > max) max = i.stock; });
+    var totalSets = 0, totalValor = 0;
+    inv.forEach(function(i){ totalSets += i.stock; totalValor += i.valor; });
+
+    $('#invTotal').textContent = totalSets+' sets · '+money(totalValor);
+    $('#invGrid').innerHTML = inv.map(function(i){
+      var badge = '';
+      if(i.alerta === 'negativo') badge = '<span class="badge neg">Faltante</span>';
+      else if(i.alerta === 'agotado') badge = '<span class="badge out">Agotado</span>';
+      else if(i.alerta === 'bajo') badge = '<span class="badge low">Stock bajo</span>';
+      else badge = '<span class="badge ok">Disponible</span>';
+      var pct = Math.max(0, Math.min(100, (i.stock / max) * 100));
+      return '<div class="inv-card">'
+        + '<div class="inv-top"><span class="swatch" style="background:'+colorHex(i.color)+'"></span>'
+        + '<strong>'+esc(i.color)+'</strong><span style="margin-left:auto">'+badge+'</span></div>'
+        + '<div class="inv-num"><b>'+i.stock+'</b><span>sets en bodega</span></div>'
+        + '<div class="bar"><i style="width:'+pct+'%"></i></div>'
+        + '<div class="inv-meta"><span>Costo '+money(i.costoUnitario)+'</span><span>Valor '+money(i.valor)+'</span></div>'
+        + '<div class="inv-meta" style="margin-top:3px"><span>Vendidos: '+i.salidas+'</span><span>'+(i.ultimaEntrada?'Última entrada: '+esc(i.ultimaEntrada):'Sin compras aún')+'</span></div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function estadoPill(e){
+    var s = String(e||'').toLowerCase();
+    var cls = 'pendiente';
+    if(/pagad|confirm|entregad|completad/.test(s) && !/pendiente|no pagad|no confirmad/.test(s)) cls = 'pagado';
+    else if(/entregad/.test(s)) cls = 'entregado';
+    if(/cancelad|anulad/.test(s)) cls = 'cancelado';
+    return '<span class="pill '+cls+'">'+esc(e||'Sin estado')+'</span>';
+  }
+
+  function pintarPedidos(){
+    var rows = DATA.pedidos || [];
+    if(!rows.length){ $('#pedidosBody').innerHTML = '<tr><td colspan="8" class="empty">Todavía no hay pedidos</td></tr>'; return; }
+    var opts = DATA.estados || [];
+    $('#pedidosBody').innerHTML = rows.map(function(p){
+      var sel = '<select class="st-select" data-ref="'+esc(p.referencia)+'" style="padding:7px 10px;border-radius:9px;background:#0d0c11;color:#fff;border:1px solid #4d3d4e">'
+        + opts.map(function(o){ return '<option value="'+esc(o)+'"'+(o===p.estado?' selected':'')+'>'+esc(o)+'</option>'; }).join('')
+        + '</select>';
+      return '<tr>'
+        + '<td class="muted">'+esc(p.fecha)+'</td>'
+        + '<td class="strong">'+esc(p.referencia)+'</td>'
+        + '<td>'+esc(p.nombre)+(p.celular?'<br><span class="muted" style="font-size:.78rem">'+esc(p.celular)+'</span>':'')+'</td>'
+        + '<td class="muted">'+esc(p.ciudad)+'</td>'
+        + '<td class="num">'+p.cantidad+'</td>'
+        + '<td class="num strong">'+money(p.producto+p.envio)+'</td>'
+        + '<td class="num">'+money(p.pagadoHoy)+'</td>'
+        + '<td>'+estadoPill(p.estado)+'<div style="margin-top:6px">'+sel+'</div></td>'
+        + '</tr>';
+    }).join('');
+
+    $$('.st-select').forEach(function(sel){
+      sel.addEventListener('change', function(){
+        api('set_order_status', { action:'set_order_status', referencia: sel.getAttribute('data-ref'), estado: sel.value })
+          .then(function(){ toast('Estado actualizado', 'ok'); return cargar(); })
+          .catch(function(e){ toast(e.message, 'err'); });
+      });
+    });
+  }
+
+  function tipoPill(t){
+    var map = { INICIAL:'badge pink', COMPRA:'badge ok', AJUSTE:'badge low', PEDIDO:'badge low', DEVOLUCION:'badge pink' };
+    return '<span class="'+(map[t]||'badge pink')+'">'+esc(t)+'</span>';
+  }
+
+  function pintarCompras(){
+    var rows = DATA.compras || [];
+    var total = 0;
+    rows.forEach(function(r){ total += r.total; });
+    $('#comprasTotal').textContent = money(total);
+    if(!rows.length){ $('#comprasBody').innerHTML = '<tr><td colspan="8" class="empty">Todavía no hay compras registradas</td></tr>'; return; }
+    $('#comprasBody').innerHTML = rows.map(function(r){
+      return '<tr>'
+        + '<td class="muted">'+esc(r.fecha)+'</td>'
+        + '<td>'+tipoPill(r.tipo)+'</td>'
+        + '<td>'+esc(r.color)+'</td>'
+        + '<td class="num strong">'+r.cantidad+'</td>'
+        + '<td class="num">'+money(r.costoUnitario)+'</td>'
+        + '<td class="num strong">'+money(r.total)+'</td>'
+        + '<td class="muted">'+esc(r.detalle||'')+'</td>'
+        + '<td class="num"><button class="icon-btn del-mov" data-fila="'+r.fila+'" title="Borrar">×</button></td>'
+        + '</tr>';
+    }).join('');
+
+    $$('.del-mov').forEach(function(b){
+      b.addEventListener('click', function(){
+        if(!confirm('¿Borrar este movimiento?')) return;
+        api('delete_movement', { action:'delete_movement', fila: Number(b.getAttribute('data-fila')) })
+          .then(function(){ toast('Movimiento borrado', 'ok'); return cargar(); })
+          .catch(function(e){ toast(e.message, 'err'); });
+      });
+    });
+  }
+
+  function pintarGastos(){
+    var rows = DATA.gastos || [];
+    var cats = DATA.gastosPorCategoria || {};
+    var total = 0, maxCat = 1;
+    Object.keys(cats).forEach(function(k){ total += cats[k]; if(cats[k] > maxCat) maxCat = cats[k]; });
+    $('#gastosTotal').textContent = money(total);
+
+    var keys = Object.keys(cats);
+    $('#catList').innerHTML = keys.length ? keys.map(function(k){
+      var pct = Math.max(4, (cats[k]/maxCat)*100);
+      return '<div class="cat"><b>'+esc(k)+'</b><span>'+money(cats[k])+'</span>'
+        + '<div class="bar"><i style="width:'+pct+'%;background:linear-gradient(90deg,#ff5c8a,#ffb347)"></i></div></div>';
+    }).join('') : '<div class="empty">Sin gastos registrados</div>';
+
+    if(!rows.length){ $('#gastosBody').innerHTML = '<tr><td colspan="5" class="empty">Todavía no hay gastos</td></tr>'; return; }
+    $('#gastosBody').innerHTML = rows.map(function(r){
+      return '<tr>'
+        + '<td class="muted">'+esc(r.fecha)+'</td>'
+        + '<td><span class="pill">'+esc(r.categoria)+'</span></td>'
+        + '<td>'+esc(r.descripcion)+'</td>'
+        + '<td class="num strong">'+money(r.monto)+'</td>'
+        + '<td class="num"><button class="icon-btn del-gas" data-fila="'+r.fila+'" title="Borrar">×</button></td>'
+        + '</tr>';
+    }).join('');
+
+    $$('.del-gas').forEach(function(b){
+      b.addEventListener('click', function(){
+        if(!confirm('¿Borrar este gasto?')) return;
+        api('delete_expense', { action:'delete_expense', fila: Number(b.getAttribute('data-fila')) })
+          .then(function(){ toast('Gasto borrado', 'ok'); return cargar(); })
+          .catch(function(e){ toast(e.message, 'err'); });
+      });
+    });
+  }
+
+  function pintarMovimientos(){
+    var rows = DATA.movimientos || [];
+    if(!rows.length){ $('#movBody').innerHTML = '<tr><td colspan="8" class="empty">Sin movimientos todavía</td></tr>'; return; }
+    $('#movBody').innerHTML = rows.map(function(r){
+      var signo = (r.tipo==='PEDIDO'||r.cantidad<0) ? '' : '+';
+      return '<tr>'
+        + '<td class="muted">'+esc(r.fecha)+'</td>'
+        + '<td>'+tipoPill(r.tipo)+'</td>'
+        + '<td>'+esc(r.color)+'</td>'
+        + '<td class="num strong">'+signo+r.cantidad+'</td>'
+        + '<td class="num">'+money(r.costoUnitario)+'</td>'
+        + '<td class="num strong">'+money(r.total)+'</td>'
+        + '<td class="muted">'+esc(r.detalle||'')+'</td>'
+        + '<td class="num"><button class="icon-btn del-mov" data-fila="'+r.fila+'" title="Borrar">×</button></td>'
+        + '</tr>';
+    }).join('');
+
+    $$('#movBody .del-mov').forEach(function(b){
+      b.addEventListener('click', function(){
+        if(!confirm('¿Borrar este movimiento?')) return;
+        api('delete_movement', { action:'delete_movement', fila: Number(b.getAttribute('data-fila')) })
+          .then(function(){ toast('Movimiento borrado', 'ok'); return cargar(); })
+          .catch(function(e){ toast(e.message, 'err'); });
+      });
+    });
+  }
+
+  function llenarSelects(){
+    var cols = DATA.colores || [];
+    if($('#cColor').options.length === cols.length) return;
+    var opts = cols.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
+    $('#cColor').innerHTML = opts;
+    $('#aColor').innerHTML = opts;
+    var cats = DATA.categorias || [];
+    $('#gCategoria').innerHTML = cats.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('');
+  }
+
+  /* ---------------- formularios ---------------- */
+  $('#formCompra').addEventListener('submit', function(e){
+    e.preventDefault();
+    api('save_movement', {
+      action:'save_movement', tipo:'COMPRA', color:$('#cColor').value,
+      cantidad:Number($('#cCantidad').value), costoUnitario:Number($('#cCosto').value),
+      detalle:$('#cDetalle').value
+    }).then(function(){
+      $('#cDetalle').value = '';
+      toast('Compra guardada', 'ok');
+      return cargar();
+    }).catch(function(err){ toast(err.message, 'err'); });
+  });
+
+  $('#formAjuste').addEventListener('submit', function(e){
+    e.preventDefault();
+    api('save_movement', {
+      action:'save_movement', tipo:'AJUSTE', color:$('#aColor').value,
+      cantidad:Number($('#aCantidad').value), costoUnitario:Number($('#aCosto').value),
+      detalle:$('#aDetalle').value
+    }).then(function(){
+      $('#aDetalle').value = '';
+      toast('Ajuste aplicado', 'ok');
+      return cargar();
+    }).catch(function(err){ toast(err.message, 'err'); });
+  });
+
+  $('#formGasto').addEventListener('submit', function(e){
+    e.preventDefault();
+    api('save_expense', {
+      action:'save_expense', categoria:$('#gCategoria').value,
+      descripcion:$('#gDescripcion').value, monto:Number($('#gMonto').value)
+    }).then(function(){
+      $('#gDescripcion').value = ''; $('#gMonto').value = '0';
+      toast('Gasto guardado', 'ok');
+      return cargar();
+    }).catch(function(err){ toast(err.message, 'err'); });
+  });
+
+  /* ---------------- arranque ---------------- */
+  if(KEY){
+    api(null, null).then(function(){
+      $('#login').style.display = 'none';
+      $('#app').classList.add('on');
+      return cargar();
+    }).catch(function(){
+      sessionStorage.removeItem('lucy_panel_key');
+      KEY = '';
+    });
+  }
+  setInterval(function(){
+    if($('#app').classList.contains('on')) cargar(false);
+  }, 120000);
+})();
+</script>
+</body>
+</html>

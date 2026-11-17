@@ -25,6 +25,9 @@ const COLORES=['Rosa','Negro','Blanco','Gris','Café','Chocolate'];
 const TALLAS=['S','M','L','XL'];
 const PRODUCTO_PEDIDO='Conjunto Poly Like';
 const PRODUCTOS_INICIAL=[['Conjunto Poly Like','Sí'],['Promo 2 Conjuntos Poly Like','Sí']];
+// Costo normal de un set. Se usa cuando todavía no hay compras registradas;
+// con compras, el costo estándar es el precio al que se compró la mayoría.
+const COSTO_ESTANDAR_DEFAULT=35000;
 const CATEGORIAS_GASTO=['Empaque','Pauta publicitaria','Transporte y gasolina','Impuestos y comisiones','Otros'];
 const ESTADOS_PEDIDO=['PENDIENTE COMPROBANTE','PAGADO','CONTRAENTREGA ENVIADO','ENTREGADO','CANCELADO'];
 const ESTADOS_FACTURA=['pendiente','pagada','anulada'];
@@ -35,6 +38,51 @@ const HEADERS_MOV=['Fecha','Tipo','Producto','Color','Talla','Cantidad','Costo u
 const HEADERS_GAS=['Fecha','Categoría','Descripción','Monto','Notas'];
 const HEADERS_FAC=['Número','Fecha','Referencia del pedido','Clienta','Celular','Ciudad','Detalle','Subtotal','Envío','Total','Abono hoy','Saldo','Estado','Notas'];
 const HEADERS_PROD=['Nombre','Activo'];
+
+// Caché por ejecución: evita releer la hoja PRODUCTOS en cada movimiento.
+let CACHE_PRODUCTOS=null;
+
+/**
+ * Compras reales de mercadería (carga histórica).
+ * Cada docena trae 6 sets "S/M" (4 S + 2 M) y 6 "L/XL" (3 L + 3 XL),
+ * repartidos entre los 6 colores. El reparto por color se calculó para
+ * que el stock cuadre con las ventas ya registradas.
+ */
+const COMPRAS_HISTORICAS=[
+  {referencia:'COMPRA-2026-10-24',fecha:'2026-10-24',costoUnitario:45000,
+   detalle:'Compra 24 oct · 6 sudaderas talla L/XL a $45.000',
+   lineas:[{color:'Café',tallas:{L:2,XL:2}},{color:'Negro',tallas:{XL:1}},{color:'Chocolate',tallas:{L:1}}]},
+  {referencia:'COMPRA-2026-10-25',fecha:'2026-10-25',costoUnitario:35000,
+   detalle:'Compra 25 oct · 3 docenas a $35.000 (36 sets)',
+   lineas:[
+     {color:'Café',tallas:{S:3,L:1,XL:2}},
+     {color:'Negro',tallas:{S:3,L:3}},
+     {color:'Rosa',tallas:{S:3,L:2,XL:1}},
+     {color:'Blanco',tallas:{S:3,L:1,XL:2}},
+     {color:'Gris',tallas:{S:3,L:3}},
+     {color:'Chocolate',tallas:{S:3,L:3}}
+   ]},
+  {referencia:'COMPRA-2026-11-07',fecha:'2026-11-07',costoUnitario:35000,
+   detalle:'Compra 7 nov · 1 docena a $35.000 (12 sets)',
+   lineas:[
+     {color:'Café',tallas:{S:1,XL:1}},
+     {color:'Negro',tallas:{M:1,L:1}},
+     {color:'Rosa',tallas:{M:1,XL:1}},
+     {color:'Blanco',tallas:{M:1,XL:1}},
+     {color:'Gris',tallas:{M:1,XL:1}},
+     {color:'Chocolate',tallas:{S:1,L:1}}
+   ]},
+  {referencia:'COMPRA-2026-11-09',fecha:'2026-11-09',costoUnitario:35000,
+   detalle:'Compra 9 nov · 1 docena a $35.000 (12 sets)',
+   lineas:[
+     {color:'Café',tallas:{M:1,XL:1}},
+     {color:'Negro',tallas:{M:1,XL:1}},
+     {color:'Rosa',tallas:{M:1,XL:1}},
+     {color:'Blanco',tallas:{M:1,XL:1}},
+     {color:'Gris',tallas:{M:1,XL:1}},
+     {color:'Chocolate',tallas:{M:1,XL:1}}
+   ]}
+];
 
 /* ============================ ENTRADAS ============================ */
 
@@ -58,12 +106,18 @@ function doPost(e){
     if(action==='save_movement'){assertKey_(raw.key);return guardarMovimiento_(raw)}
     if(action==='save_expense'){assertKey_(raw.key);return guardarGasto_(raw)}
     if(action==='set_order_status'){assertKey_(raw.key);return cambiarEstado_(raw)}
+    if(action==='update_order_items'){assertKey_(raw.key);return actualizarPedido_(raw)}
+    if(action==='import_inventory'){assertKey_(raw.key);return importarInventarioInicial_()}
+    if(action==='reconcile_inventory'){assertKey_(raw.key);return reconciliarInventario_()}
+    if(action==='fix_costs'){assertKey_(raw.key);return normalizarCostosVentas_()}
     if(action==='delete_expense'){assertKey_(raw.key);return borrarGasto_(raw)}
     if(action==='delete_movement'){assertKey_(raw.key);return borrarMovimiento_(raw)}
     if(action==='save_invoice'){assertKey_(raw.key);return guardarFactura_(raw)}
     if(action==='save_invoice_manual'){assertKey_(raw.key);return guardarFacturaManual_(raw)}
     if(action==='save_product'){assertKey_(raw.key);return guardarProducto_(raw)}
     if(action==='delete_invoice'){assertKey_(raw.key);return borrarFactura_(raw)}
+    if(action==='import_orders'){assertKey_(raw.key);return importarPedidos_(raw)}
+    if(action==='delete_orders'){assertKey_(raw.key);return borrarPedidos_(raw)}
     return json_({ok:false,error:'Acción inválida'});
   }catch(error){return json_({ok:false,error:error.message})}
 }
@@ -133,21 +187,18 @@ function reconcileTotals_(o){
 /* ========================== INVENTARIO ========================== */
 
 function descontarInventario_(o){
-  const state=estadoInventario_();
+  const costo=costoEstandar_(leerMovimientos_());
   const sheet=getSheet_(SHEET_MOVIMIENTOS);
   ensureHeaders_(sheet,HEADERS_MOV);
   const now=new Date();
   const rows=[];
   const producto=PRODUCTO_PEDIDO;
+  // Un combo son 2 conjuntos y la landing manda 2 items: cada item descuenta
+  // 1 set. Una venta por unidad manda 1 item y descuenta 1 set.
   o.items.forEach(function(item,index){
     const color=colorCanonica_(item.color);
     const talla=tallaCanonica_(item.size);
-    const porTalla=state.tallas[producto+'|'+color+'|'+talla];
-    const porColor=state.colores[producto+'|'+color];
-    let promedio=0;
-    if(porTalla&&porTalla.entradas>0)promedio=porTalla.costoTotal/porTalla.entradas;
-    else if(porColor&&porColor.entradas>0)promedio=porColor.costoTotal/porColor.entradas;
-    rows.push([now,'PEDIDO',producto,color,talla,1,promedio,promedio,'Venta '+o.reference+' · Set '+(index+1)+(talla?' · Talla '+talla:''),o.reference]);
+    rows.push([now,'PEDIDO',producto,color,talla,1,costo,costo,'Venta '+o.reference+' · Set '+(index+1)+(talla?' · Talla '+talla:''),o.reference]);
   });
   if(rows.length)sheet.getRange(sheet.getLastRow()+1,1,rows.length,HEADERS_MOV.length).setValues(rows);
   actualizarHojaInventario_();
@@ -240,8 +291,52 @@ function tallasDe_(state,producto,color){
   return out;
 }
 
-function estadoInventario_(){
-  const movs=leerMovimientos_();
+/**
+ * Costo estándar por set: el precio al que se compró la mayor cantidad de
+ * unidades. Hoy son $35.000 porque 82 de las 88 unidades se compraron así.
+ * Las pocas unidades a otro precio se muestran aparte (ver especialesDeCompras_).
+ */
+function costoEstandar_(movs){
+  const acc={};
+  (movs||[]).forEach(function(m){
+    if(m.tipo!=='COMPRA'&&m.tipo!=='INICIAL')return;
+    const costo=Math.round(Number(m.costoUnitario)||0);
+    const unidades=Math.abs(Number(m.cantidad)||0);
+    if(!costo||!unidades)return;
+    acc[costo]=(acc[costo]||0)+unidades;
+  });
+  let mejor=0,mejorUnidades=0;
+  Object.keys(acc).forEach(function(k){
+    if(acc[k]>mejorUnidades){mejorUnidades=acc[k];mejor=Number(k)}
+  });
+  return mejor||COSTO_ESTANDAR_DEFAULT;
+}
+
+/**
+ * Unidades compradas a un costo distinto del estándar (por ejemplo las 6 del
+ * 24 de octubre a $45.000). Se devuelven aparte para poder mostrarlas sin
+ * mezclarlas en el costo normal del inventario.
+ */
+function especialesDeCompras_(movs,costoEstandar){
+  const porCombo={},porColor={};
+  (movs||[]).forEach(function(m){
+    if(m.tipo!=='COMPRA'&&m.tipo!=='INICIAL')return;
+    const costo=Math.round(Number(m.costoUnitario)||0);
+    const unidades=Math.abs(Number(m.cantidad)||0);
+    if(!costo||!unidades||costo===costoEstandar)return;
+    const k=m.color+'|'+(m.talla||'');
+    if(!porCombo[k])porCombo[k]={color:m.color,talla:m.talla||'',unidades:0,costos:{}};
+    porCombo[k].unidades+=unidades;
+    porCombo[k].costos[costo]=(porCombo[k].costos[costo]||0)+unidades;
+    if(!porColor[m.color])porColor[m.color]={color:m.color,unidades:0,costos:{}};
+    porColor[m.color].unidades+=unidades;
+    porColor[m.color].costos[costo]=(porColor[m.color].costos[costo]||0)+unidades;
+  });
+  return {porCombo:porCombo,porColor:porColor};
+}
+
+function estadoInventario_(movsIn){
+  const movs=movsIn||leerMovimientos_();
   const tallas={};
   const colores={};
   function nuevoColor_(producto,color){
@@ -261,6 +356,11 @@ function estadoInventario_(){
     if(m.tipo==='PEDIDO'){
       c.stock-=m.cantidad;c.salidas+=m.cantidad;c.costeVendido+=m.total;
       it.stock-=m.cantidad;it.salidas+=m.cantidad;it.costeVendido+=m.total;
+    }else if(m.tipo==='AJUSTE'){
+      // Un ajuste es una corrección de conteo, no una compra: mueve el stock
+      // pero NO entra al costo promedio (antes lo hundía con costos en $0).
+      c.stock+=m.cantidad;
+      it.stock+=m.cantidad;
     }else{
       c.stock+=m.cantidad;c.entradas+=m.cantidad;c.costoTotal+=m.costoUnitario*m.cantidad;
       it.stock+=m.cantidad;it.entradas+=m.cantidad;it.costoTotal+=m.costoUnitario*m.cantidad;
@@ -304,14 +404,17 @@ function guardarProducto_(raw){
   for(let i=2;i<=last;i++){
     if(normaliza_(sheet.getRange(i,1).getValue())===normaliza_(nombre)){
       sheet.getRange(i,2).setValue('Sí');
+      CACHE_PRODUCTOS=null;
       return json_({ok:true,nombre:nombre,existia:true});
     }
   }
   sheet.appendRow([nombre,'Sí']);
+  CACHE_PRODUCTOS=null;
   return json_({ok:true,nombre:nombre,existia:false});
 }
 
 function listarProductos_(){
+  if(CACHE_PRODUCTOS)return CACHE_PRODUCTOS;
   const sheet=asegurarProductos_();
   const last=sheet.getLastRow();
   const out=[];
@@ -319,7 +422,8 @@ function listarProductos_(){
     const n=String(sheet.getRange(i,1).getValue()||'').trim();
     if(n)out.push({nombre:n,activo:String(sheet.getRange(i,2).getValue()||'Sí')!=='No'});
   }
-  return out.length?out:PRODUCTOS_INICIAL.map(function(p){return {nombre:p[0],activo:true}});
+  CACHE_PRODUCTOS=out.length?out:PRODUCTOS_INICIAL.map(function(p){return {nombre:p[0],activo:true}});
+  return CACHE_PRODUCTOS;
 }
 
 /* ============================ GASTOS ============================ */
@@ -414,12 +518,289 @@ function cambiarEstado_(raw){
   throw new Error('Pedido no encontrado');
 }
 
+/* ============ ACTUALIZAR SETS (COLOR / TALLA) DE UN PEDIDO ============ */
+
+// Cambia el detalle de cada set y/o el estado. Vuelve a cuadrar el inventario:
+// borra los movimientos de venta de ese pedido y los crea de nuevo con el
+// detalle corregido. Así el stock siempre refleja lo que dice el pedido.
+function actualizarPedido_(raw){
+  const referencia=String(raw.referencia||'').trim();
+  if(!referencia)throw new Error('Falta la referencia');
+  const sheet=getSheet_(SHEET_PEDIDOS);
+  const last=sheet.getLastRow();
+  if(last<2)throw new Error('Todavía no hay pedidos');
+  const data=sheet.getRange(2,1,last-1,HEADERS.length).getValues();
+  let fila=-1, fecha=null;
+  for(let i=0;i<data.length;i++){
+    if(String(data[i][1]).trim()===referencia){fila=i+2;fecha=data[i][0];break;}
+  }
+  if(fila<0)throw new Error('Pedido no encontrado');
+
+  if(raw.estado){
+    const estado=String(raw.estado).trim();
+    if(ESTADOS_PEDIDO.indexOf(estado)<0)throw new Error('Estado no válido');
+    sheet.getRange(fila,3).setValue(estado);
+  }
+
+  if(Array.isArray(raw.items)&&raw.items.length){
+    const items=raw.items.map(function(it){
+      const color=colorCanonica_(it.color);
+      const talla=tallaCanonica_(it.size||it.talla);
+      if(COLORES.indexOf(color)<0)throw new Error('Color no válido: '+(it.color||''));
+      if(TALLAS.indexOf(talla)<0)throw new Error('Talla no válida: '+(it.size||it.talla||''));
+      return {color:color,talla:talla};
+    });
+    const detail=items.map(function(it,i){
+      return 'Sudadera '+(i+1)+' | Producto: Set chaqueta + pantalón | Color: '+it.color+' | Talla: '+it.talla;
+    }).join(' || ');
+    sheet.getRange(fila,12).setValue(items.length);
+    sheet.getRange(fila,13).setValue(detail);
+    try{resincronizarMovimientos_(referencia,fecha,items)}catch(e){console.error('inventario',e&&e.message)}
+  }
+
+  return json_({ok:true,referencia:referencia});
+}
+
+function resincronizarMovimientos_(referencia,fecha,items){
+  const sheet=getSheet_(SHEET_MOVIMIENTOS);
+  ensureHeaders_(sheet,HEADERS_MOV);
+  const last=sheet.getLastRow();
+  if(last>=2){
+    const data=sheet.getRange(2,1,last-1,HEADERS_MOV.length).getValues();
+    for(let i=data.length-1;i>=0;i--){
+      if(String(data[i][1]).toUpperCase()==='PEDIDO'&&String(data[i][9]).trim()===referencia)sheet.deleteRow(i+2);
+    }
+  }
+  const costo=costoEstandar_(leerMovimientos_());
+  const fechaMov=(Object.prototype.toString.call(fecha)==='[object Date]')?fecha:new Date();
+  const rows=items.map(function(it,index){
+    return [fechaMov,'PEDIDO',PRODUCTO_PEDIDO,it.color,it.talla,1,costo,costo,
+      'Venta '+referencia+' · Set '+(index+1)+' · Talla '+it.talla,referencia];
+  });
+  if(rows.length)sheet.getRange(sheet.getLastRow()+1,1,rows.length,HEADERS_MOV.length).setValues(rows);
+  actualizarHojaInventario_();
+}
+
+/* ============ CARGA HISTÓRICA DE COMPRAS Y VENTAS ============ */
+
+// Carga las 4 compras reales y descuenta las ventas que ya estaban
+// registradas. Es idempotente: si ya se corrió, no duplica nada.
+function importarInventarioInicial_(){
+  const sheet=getSheet_(SHEET_MOVIMIENTOS);
+  ensureHeaders_(sheet,HEADERS_MOV);
+  const refs={};
+  leerMovimientos_().forEach(function(m){if(m.referencia)refs[String(m.referencia).trim()]=true});
+
+  const producto=PRODUCTO_PEDIDO;
+  const nuevos=[];
+  let compras=0;
+
+  // 1) Compras reales
+  COMPRAS_HISTORICAS.forEach(function(c){
+    if(refs[c.referencia])return;
+    const fecha=fechaDe_(c.fecha);
+    c.lineas.forEach(function(l){
+      Object.keys(l.tallas).forEach(function(t){
+        const q=Number(l.tallas[t])||0;
+        if(!q)return;
+        nuevos.push([fecha,'COMPRA',producto,colorCanonica_(l.color),tallaCanonica_(t),q,
+          c.costoUnitario,q*c.costoUnitario,c.detalle,c.referencia]);
+        compras+=q;
+      });
+    });
+  });
+
+  // Costo promedio por color+talla a partir de esas compras
+  const porTalla={},porColor={};
+  let globalN=0,globalC=0;
+  COMPRAS_HISTORICAS.forEach(function(c){
+    c.lineas.forEach(function(l){
+      const color=colorCanonica_(l.color);
+      Object.keys(l.tallas).forEach(function(t){
+        const q=Number(l.tallas[t])||0;
+        if(!q)return;
+        const k=color+'|'+tallaCanonica_(t);
+        if(!porTalla[k])porTalla[k]={n:0,c:0};
+        porTalla[k].n+=q;porTalla[k].c+=q*c.costoUnitario;
+        if(!porColor[color])porColor[color]={n:0,c:0};
+        porColor[color].n+=q;porColor[color].c+=q*c.costoUnitario;
+        globalN+=q;globalC+=q*c.costoUnitario;
+      });
+    });
+  });
+  const costoGlobal=globalN?globalC/globalN:0;
+
+  // 2) Ventas ya registradas (descuentan stock)
+  let ventas=0;
+  leerFilas_(SHEET_PEDIDOS,HEADERS).forEach(function(r){
+    const referencia=String(r[1]||'').trim();
+    const estado=String(r[2]||'');
+    if(!referencia||refs[referencia])return;
+    if(/cancelad|anulad|devuel/.test(normaliza_(estado)))return;
+    const items=itemsDeDetalle_(r[12]);
+    if(!items.length)return;
+    const fecha=fechaDe_(r[0]);
+    items.forEach(function(it,index){
+      const k=it.color+'|'+it.talla;
+      let costo=costoGlobal;
+      if(porTalla[k])costo=porTalla[k].c/porTalla[k].n;
+      else if(porColor[it.color])costo=porColor[it.color].c/porColor[it.color].n;
+      costo=Math.round(costo);
+      nuevos.push([fecha,'PEDIDO',producto,it.color,it.talla,1,costo,costo,
+        'Venta histórica '+referencia+' · Set '+(index+1),referencia]);
+      ventas++;
+    });
+  });
+
+  if(nuevos.length){
+    sheet.getRange(sheet.getLastRow()+1,1,nuevos.length,HEADERS_MOV.length).setValues(nuevos);
+    actualizarHojaInventario_();
+  }
+  return json_({ok:true,insertados:nuevos.length,setsComprados:compras,setsVendidos:ventas});
+}
+
+// Lee "Color: X | Talla: Y" del detalle. Ignora "por confirmar".
+function itemsDeDetalle_(detalle){
+  const txt=String(detalle||'');
+  const re=/Color:\s*([^|]+?)\s*\|\s*Talla:\s*([^|]+?)(?=\s*(?:Sudadera|\|\||$))/gi;
+  const out=[];
+  let m;
+  while((m=re.exec(txt))){
+    const color=colorCanonica_(m[1]);
+    const talla=tallaCanonica_(m[2]);
+    if(COLORES.indexOf(color)<0)continue;
+    if(TALLAS.indexOf(talla)<0)continue;
+    out.push({color:color,talla:talla});
+  }
+  return out;
+}
+
+function fechaDe_(value){
+  if(Object.prototype.toString.call(value)==='[object Date]')return value;
+  const s=String(value||'');
+  const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if(m)return new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),12,0,0);
+  const d=new Date(s);
+  return isNaN(d.getTime())?new Date():d;
+}
+
+/* ============ RECONCILIAR INVENTARIO CON LOS PEDIDOS ============ */
+
+// Deja los movimientos de venta exactamente iguales a los pedidos:
+// borra todos los PEDIDO y los vuelve a crear con el detalle actual.
+function reconciliarInventario_(){
+  const pedidos=leerFilas_(SHEET_PEDIDOS,HEADERS).map(function(r){
+    return {ref:String(r[1]||'').trim(),fecha:r[0],estado:String(r[2]||''),detalle:r[12]||''};
+  });
+  const nuevos=[];
+  let sincronizados=0,saltados=0;
+
+  const costo=costoEstandar_(leerMovimientos_());
+
+  pedidos.forEach(function(p){
+    if(!p.ref)return;
+    if(/cancelad|anulad|devuel/.test(normaliza_(p.estado)))return;
+    const items=itemsDeDetalle_(p.detalle);
+    if(!items.length){saltados++;return;}
+    const fecha=(Object.prototype.toString.call(p.fecha)==='[object Date]')?p.fecha:new Date();
+    items.forEach(function(it,index){
+      nuevos.push([fecha,'PEDIDO',PRODUCTO_PEDIDO,it.color,it.talla,1,costo,costo,
+        'Venta '+p.ref+' · Set '+(index+1)+' · Talla '+it.talla,p.ref]);
+    });
+    sincronizados++;
+  });
+
+  const sheet=getSheet_(SHEET_MOVIMIENTOS);
+  const last=sheet.getLastRow();
+  let borrados=0;
+  if(last>=2){
+    const data=sheet.getRange(2,1,last-1,HEADERS_MOV.length).getValues();
+    for(let i=data.length-1;i>=0;i--){
+      if(String(data[i][1]).toUpperCase()==='PEDIDO'){sheet.deleteRow(i+2);borrados++;}
+    }
+  }
+  if(nuevos.length)sheet.getRange(sheet.getLastRow()+1,1,nuevos.length,HEADERS_MOV.length).setValues(nuevos);
+  actualizarHojaInventario_();
+  return json_({ok:true,pedidos:sincronizados,saltados:saltados,borrados:borrados,creados:nuevos.length});
+}
+
+/* ============ NORMALIZAR EL COSTO DE LAS VENTAS ============ */
+
+// Deja el costo de todas las ventas (PEDIDO) en el costo estándar por set.
+// Antes el costo salía de un promedio que los ajustes distorsionaban.
+// Solo toca las columnas "Costo unitario" y "Total": no cambia fechas,
+// tallas, cantidades ni stock.
+function normalizarCostosVentas_(){
+  const sheet=getSheet_(SHEET_MOVIMIENTOS);
+  ensureHeaders_(sheet,HEADERS_MOV);
+  const last=sheet.getLastRow();
+  if(last<2)return json_({ok:true,actualizados:0});
+  const costo=costoEstandar_(leerMovimientos_());
+  const range=sheet.getRange(2,1,last-1,HEADERS_MOV.length);
+  const data=range.getValues();
+  let actualizados=0;
+  for(let i=0;i<data.length;i++){
+    if(String(data[i][1]).toUpperCase()!=='PEDIDO')continue;
+    const cantidad=Number(data[i][5])||0;
+    const costoActual=Math.round(Number(data[i][6])||0);
+    const totalActual=Math.round(Number(data[i][7])||0);
+    if(costoActual===costo&&totalActual===costo*cantidad)continue;
+    data[i][6]=costo;
+    data[i][7]=costo*cantidad;
+    actualizados++;
+  }
+  if(actualizados){
+    range.setValues(data);
+    actualizarHojaInventario_();
+  }
+  return json_({ok:true,actualizados:actualizados,costoEstandar:costo});
+}
+
+/* ================= IMPORTACIÓN HISTÓRICA (WhatsApp) ================= */
+
+// Inserta pedidos ya existentes sin validar campos obligatorios y SIN descontar
+// inventario: son ventas históricas que no deben alterar el stock actual.
+function importarPedidos_(raw){
+  const rows=Array.isArray(raw.pedidos)?raw.pedidos:[];
+  if(!rows.length)throw new Error('Sin pedidos para importar');
+  const sheet=getSheet_(SHEET_PEDIDOS);
+  ensureHeaders_(sheet,HEADERS);
+  const values=rows.map(function(p){
+    return HEADERS.map(function(header){
+      if(header==='Fecha'){
+        const d=p.Fecha?new Date(p.Fecha):new Date();
+        return isNaN(d.getTime())?new Date():d;
+      }
+      return p[header]!==undefined&&p[header]!==null?p[header]:'';
+    });
+  });
+  sheet.getRange(sheet.getLastRow()+1,1,values.length,HEADERS.length).setValues(values);
+  return json_({ok:true,importados:values.length});
+}
+
+// Borra solo los pedidos cuyas referencias se indiquen (no toca nada más).
+function borrarPedidos_(raw){
+  const refs=(raw.referencias||[]).map(function(r){return String(r).trim()}).filter(Boolean);
+  if(!refs.length)throw new Error('Sin referencias para borrar');
+  const sheet=getSheet_(SHEET_PEDIDOS);
+  const last=sheet.getLastRow();
+  if(last<2)return json_({ok:true,borrados:0});
+  const data=sheet.getRange(2,1,last-1,HEADERS.length).getValues();
+  let borrados=0;
+  for(let i=data.length-1;i>=0;i--){
+    if(refs.indexOf(String(data[i][1]).trim())>=0){sheet.deleteRow(i+2);borrados++;}
+  }
+  return json_({ok:true,borrados:borrados});
+}
+
 /* ========================== DASHBOARD ========================== */
 
 function dashboard_(){
-  const state=estadoInventario_();
   const movs=leerMovimientos_();
+  const state=estadoInventario_(movs);
   const productos=listarProductos_();
+  const costoEst=costoEstandar_(movs);
+  const especiales=especialesDeCompras_(movs,costoEst);
 
   const inventario=[];
   const porProducto={};
@@ -433,15 +814,19 @@ function dashboard_(){
       const it=state.tallas[c.producto+'|'+c.color+'|'+talla];
       if(!it)return;
       const prom=it.entradas>0?it.costoTotal/it.entradas:0;
+      const esp=especiales.porCombo[c.color+'|'+talla]||null;
       inventario.push({producto:c.producto,color:c.color,talla:talla,stock:it.stock,entradas:it.entradas,salidas:it.salidas,
-        costoUnitario:Math.round(prom),valor:Math.round(it.stock*prom),
+        costoUnitario:costoEst,valor:Math.round(it.stock*costoEst),costoPromedio:Math.round(prom),
+        especiales:esp?{unidades:esp.unidades,costos:esp.costos}:null,
         ultimaEntrada:it.ultimaEntrada||'',alerta:alerta_(it.stock)});
     });
     const libre=state.tallas[c.producto+'|'+c.color+'|'];
     if(libre&&(libre.stock||libre.entradas||libre.salidas)){
       const prom=libre.entradas>0?libre.costoTotal/libre.entradas:0;
+      const espLibre=especiales.porCombo[c.color+'|']||null;
       inventario.push({producto:c.producto,color:c.color,talla:'',stock:libre.stock,entradas:libre.entradas,salidas:libre.salidas,
-        costoUnitario:Math.round(prom),valor:Math.round(libre.stock*prom),
+        costoUnitario:costoEst,valor:Math.round(libre.stock*costoEst),costoPromedio:Math.round(prom),
+        especiales:espLibre?{unidades:espLibre.unidades,costos:espLibre.costos}:null,
         ultimaEntrada:libre.ultimaEntrada||'',alerta:alerta_(libre.stock)});
     }
   });
@@ -453,8 +838,10 @@ function dashboard_(){
       const c=po.colores[color];
       if(!c)return;
       const prom=c.entradas>0?c.costoTotal/c.entradas:0;
+      const espColor=especiales.porColor[color]||null;
       inventarioColor.push({producto:pn,color:color,stock:c.stock,entradas:c.entradas,salidas:c.salidas,
-        costoUnitario:Math.round(prom),valor:Math.round(c.stock*prom),
+        costoUnitario:costoEst,valor:Math.round(c.stock*costoEst),costoPromedio:Math.round(prom),
+        especiales:espColor?{unidades:espColor.unidades,costos:espColor.costos}:null,
         ultimaEntrada:c.ultimaEntrada||'',alerta:alerta_(c.stock),
         tallas:c.tallas||{},sinDesglose:(state.tallas[pn+'|'+color+'|']||{}).stock||0});
     });
@@ -486,15 +873,18 @@ function dashboard_(){
   });
 
   let ventas=0,ventasPendientes=0,cobrado=0,cobradoPendiente=0,unidades=0,confirmados=0,pendientes=0;
+  let envios=0,enviosPendientes=0;
   pedidos.forEach(function(p){
     unidades+=p.cantidad;
     if(esConfirmado_(p.estado)){
       confirmados++;
       ventas+=p.producto+p.envio;
+      envios+=p.envio;
       cobrado+=p.pagadoHoy;
     }else{
       pendientes++;
       ventasPendientes+=p.producto+p.envio;
+      enviosPendientes+=p.envio;
       cobradoPendiente+=p.pagadoHoy;
     }
   });
@@ -516,10 +906,18 @@ function dashboard_(){
   });
 
   // Las facturas manuales (venta por aparte) tambien son ventas.
-  let ventasManuales=0, cobradoManuales=0;
+  let ventasManuales=0, cobradoManuales=0, enviosManuales=0;
   facturas.forEach(function(f){
-    if(f.manual && f.estado!=='anulada'){ ventasManuales+=f.total; cobradoManuales+=f.total; }
+    if(f.manual && f.estado!=='anulada'){ ventasManuales+=f.total; cobradoManuales+=f.total; enviosManuales+=f.envio; }
   });
+
+  // El envío lo paga cada clienta: es dinero de paso, no ganancia.
+  // La utilidad real descuenta los envíos, el costo de la mercadería y los gastos.
+  const enviosTotal=envios+enviosManuales;
+  const ventasConEnvio=ventas+ventasManuales;
+  const ventasSinEnvio=ventasConEnvio-enviosTotal;
+  const utilidadSinEnvios=ventasSinEnvio-costoVendido;
+  const utilidadReal=utilidadSinEnvios-totalGastos;
 
   return {
     ok:true,
@@ -532,19 +930,21 @@ function dashboard_(){
     estadosFactura:ESTADOS_FACTURA,
     inventario:inventario,
     inventarioColor:inventarioColor,
+    costoEstandar:costoEst,
+    costosEspeciales:Object.keys(especiales.porCombo).map(function(k){return especiales.porCombo[k]}),
     ventasPorColor:Object.keys(ventasPorColor).map(function(k){return ventasPorColor[k]}),
-    movimientos:movs.slice(-200).reverse().map(function(m){
+    movimientos:movs.slice(-500).reverse().map(function(m){
       return {fila:m.fila,fecha:m.fecha,ts:m.ts,tipo:m.tipo,color:m.color,talla:m.talla,cantidad:m.cantidad,
         costoUnitario:m.costoUnitario,total:m.total,detalle:m.detalle,referencia:m.referencia};
     }),
-    gastos:gastos.slice(-200).reverse(),
+    gastos:gastos.slice(-500).reverse(),
     gastosPorCategoria:gastosPorCategoria,
     compras:compras.map(function(m){
       return {fila:m.fila,fecha:m.fecha,ts:m.ts,tipo:m.tipo,color:m.color,talla:m.talla,cantidad:m.cantidad,
         costoUnitario:m.costoUnitario,total:m.total,detalle:m.detalle};
     }).reverse(),
     facturas:facturas.reverse(),
-    pedidos:pedidos.slice(-80).reverse(),
+    pedidos:pedidos.slice(-500).reverse(),
     totales:{
       ventas:ventas+ventasManuales,ventasPedidos:ventas,ventasManuales:ventasManuales,
       ventasPendientes:ventasPendientes,cobrado:cobrado+cobradoManuales,cobradoPendiente:cobradoPendiente,
@@ -552,6 +952,9 @@ function dashboard_(){
       costoVendido:Math.round(costoVendido),invertido:Math.round(invertido),totalGastos:Math.round(totalGastos),
       utilidadBruta:Math.round(utilidadBruta+ventasManuales),
       utilidadNeta:Math.round(utilidadBruta+ventasManuales-totalGastos),
+      envios:Math.round(enviosTotal),enviosPedidos:Math.round(envios),enviosManuales:Math.round(enviosManuales),
+      enviosPendientes:Math.round(enviosPendientes),ventasSinEnvio:Math.round(ventasSinEnvio),
+      utilidadSinEnvios:Math.round(utilidadSinEnvios),utilidadReal:Math.round(utilidadReal),
       valorInventario:Math.round(valorInventario),facturas:facturas.length
     }
   };
@@ -573,12 +976,19 @@ function esConfirmado_(estado){
   return /pagad|confirm|entregad|completad|finalizad/.test(n);
 }
 
+const COLOR_ALIAS={negro:'Negro',negra:'Negro',negros:'Negro',negras:'Negro',
+  blanco:'Blanco',blanca:'Blanco',blancos:'Blanco',blancas:'Blanco',
+  rosa:'Rosa',rosado:'Rosa',rosada:'Rosa',gris:'Gris',grises:'Gris',
+  cafe:'Café',cafes:'Café',marron:'Café',marrones:'Café',
+  chocolate:'Chocolate',chocolates:'Chocolate'};
+
 function colorCanonica_(value){
   const v=String(value==null?'':value).trim();
   if(!v)return 'Sin color';
   const norm=normaliza_(v);
   const found=COLORES.filter(function(c){return normaliza_(c)===norm})[0];
-  return found||v;
+  if(found)return found;
+  return COLOR_ALIAS[norm]||v;
 }
 
 function tallaCanonica_(value){

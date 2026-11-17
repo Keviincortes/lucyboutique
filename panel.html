@@ -75,6 +75,41 @@ main{padding:22px 0 60px}
 .kpi.warn strong{color:var(--amber)}
 .kpi.info strong{color:var(--blue)}
 
+/* ---------- utilidad real ---------- */
+.hero-grid{display:grid;grid-template-columns:1.55fr 1fr;gap:14px}
+.hero-card{position:relative;overflow:hidden;background:linear-gradient(150deg,#10301f,#0b1710 70%);border:1px solid #2fdc7a4d;border-radius:22px;padding:22px 24px;box-shadow:0 20px 46px #0007}
+.hero-card::after{content:"";position:absolute;inset:auto -12% -55% auto;width:260px;height:260px;border-radius:50%;background:#2fdc7a26;filter:blur(14px)}
+.hero-card>b{display:block;font-size:.78rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#8dffb8}
+.hero-card strong{display:block;font-size:clamp(2.4rem,6vw,3.6rem);line-height:1;margin:10px 0 2px;letter-spacing:-.03em;color:#fff}
+.hero-card strong.neg{color:var(--red)}
+.hero-card>small{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+.hero-break{display:flex;gap:8px 20px;flex-wrap:wrap;margin-top:16px;color:var(--muted);font-size:.82rem;font-weight:800;position:relative;z-index:1}
+.hero-break span b{color:var(--text);font-variant-numeric:tabular-nums}
+.hero-side{display:grid;gap:14px}
+.hero-mini{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px;box-shadow:0 14px 32px #0006}
+.hero-mini b{display:block;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.hero-mini strong{display:block;font-size:1.65rem;line-height:1.1;margin-top:6px;letter-spacing:-.02em;color:var(--gold)}
+.hero-mini small{display:block;color:var(--muted);font-size:.74rem;margin-top:4px}
+@media(max-width:820px){.hero-grid{grid-template-columns:1fr}}
+
+/* ---------- filtro por fecha ---------- */
+.filtro{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.filtro label{display:grid;gap:4px;font-size:.62rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.filtro input{padding:8px 10px;border-radius:10px;border:1px solid #4d3d4e;background:#0d0c11;color:#fff;font-weight:800;font-size:.82rem}
+.filtro input:focus{border-color:var(--pink);outline:none;box-shadow:0 0 0 3px #ef5d9126}
+.filtro-nota{margin-top:10px;font-size:.78rem;font-weight:800;color:var(--muted)}
+.filtro-nota b{color:var(--pink-light)}
+
+/* ---------- sets por pedido ---------- */
+table.pedidos{min-width:1080px}
+.set-list{display:grid;gap:5px;min-width:250px}
+.set-row{display:grid;grid-template-columns:16px 1fr 64px;gap:5px;align-items:center}
+.set-n{font-size:.66rem;font-weight:900;color:var(--muted);text-align:right}
+.set-row select{padding:5px 6px;border-radius:8px;background:#0d0c11;color:#fff;border:1px solid #4d3d4e;font-size:.76rem;font-weight:800;min-width:0}
+.set-row select:focus{border-color:var(--pink);outline:none}
+.set-row select.vacio{border-color:#ffb34766;color:#ffcf8a}
+.st-select{padding:6px 9px;border-radius:9px;background:#0d0c11;color:#fff;border:1px solid #4d3d4e;font-size:.76rem;font-weight:800}
+
 /* ---------- inventario ---------- */
 .inv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
 .inv-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 14px 30px #0006;position:relative;overflow:hidden}
@@ -226,8 +261,47 @@ tbody tr:hover{background:#ffffff07}
           <div class="eyebrow">Resumen</div>
           <h2 id="updatedAt">Cargando…</h2>
         </div>
+        <div class="spacer"></div>
+        <div class="filtro">
+          <label>Desde<input type="date" id="fDesde"></label>
+          <label>Hasta<input type="date" id="fHasta"></label>
+          <button class="btn sm" type="button" id="fAplicar">Filtrar</button>
+          <button class="btn ghost sm" type="button" id="fLimpiar">Ver todo</button>
+        </div>
       </div>
+      <div class="filtro-nota" id="filtroNota"></div>
       <div class="kpis" id="kpis"></div>
+    </section>
+
+    <!-- Utilidad real -->
+    <section class="sec">
+      <div class="sec-head">
+        <div>
+          <div class="eyebrow">Dinero real</div>
+          <h2>Utilidad real</h2>
+          <p class="muted">Lo que de verdad te queda: ventas del producto, menos el costo de la mercadería y menos los gastos. Los envíos no cuentan porque los paga cada clienta.</p>
+        </div>
+      </div>
+      <div class="hero-grid">
+        <div class="hero-card">
+          <b>Utilidad real · después de envíos y gastos</b>
+          <strong id="heroUtilidad">$0</strong>
+          <small>Ventas del producto − costo de mercadería − gastos</small>
+          <div class="hero-break" id="heroBreak"></div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-mini">
+            <b>Valor de los envíos</b>
+            <strong id="heroEnvios">$0</strong>
+            <small id="heroEnviosNota">Los paga cada clienta, no salen de tu bolsillo</small>
+          </div>
+          <div class="hero-mini">
+            <b>Ventas del producto</b>
+            <strong id="heroVentasProducto">$0</strong>
+            <small>Sin contar el valor de los envíos</small>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Acciones rápidas -->
@@ -255,8 +329,8 @@ tbody tr:hover{background:#ffffff07}
           </div>
           <div class="row2">
             <div class="field">
-              <label for="cCantidad" id="cCantidadLbl">Cantidad (sets)</label>
-              <input id="cCantidad" type="number" min="1" step="1" value="2" required>
+              <label for="cCantidad" id="cCantidadLbl">Cantidad (1 set)</label>
+              <input id="cCantidad" type="number" min="1" step="1" value="1" required readonly>
             </div>
             <div class="field">
               <label for="cCosto">Costo por set ($)</label>
@@ -267,7 +341,7 @@ tbody tr:hover{background:#ffffff07}
             <label>Grupo de tallas</label>
             <div class="grp-chips" id="cGrupos"></div>
             <div class="sz-box" id="cSzBox"></div>
-            <small class="muted" id="cTallasHint">Si no eliges grupo, la entrada queda sin desglose de talla.</small>
+            <small class="muted" id="cTallasHint">Cada compra es 1 set. Si compras una docena, usa el desglose por talla.</small>
           </div>
           <div class="field">
             <label for="cDetalle">Proveedor / nota</label>
@@ -336,7 +410,7 @@ tbody tr:hover{background:#ffffff07}
         <div>
           <div class="eyebrow">Bodega</div>
           <h2>Inventario por color</h2>
-          <p class="muted">Se descuenta solo cada pedido que entra por la landing.</p>
+          <p class="muted">Se descuenta solo cada pedido que entra por la landing. Costo estándar por set: <b id="costoEstandarTxt">$35.000</b>.</p>
         </div>
         <div class="spacer"></div>
         <span class="badge pink" id="invTotal"></span>
@@ -355,10 +429,10 @@ tbody tr:hover{background:#ffffff07}
         </div>
       </div>
       <div class="table-wrap scroll">
-        <table>
+        <table class="pedidos">
           <thead><tr>
             <th>Fecha</th><th>Referencia</th><th>Clienta</th><th>Ciudad</th>
-            <th class="num">Sets</th><th class="num">Total pedido</th><th class="num">Pagó hoy</th><th>Estado</th><th></th>
+            <th class="num">Sets</th><th>Color y talla de cada set</th><th class="num">Total pedido</th><th class="num">Pagó hoy</th><th>Estado</th><th></th>
           </tr></thead>
           <tbody id="pedidosBody"></tbody>
         </table>
@@ -536,6 +610,25 @@ tbody tr:hover{background:#ffffff07}
   });
   $('#refreshBtn').addEventListener('click', function(){ cargar(true); });
 
+  /* ---------------- filtro por fechas ---------------- */
+  $('#fAplicar').addEventListener('click', function(){
+    var d = $('#fDesde').value, h = $('#fHasta').value;
+    if(!d && !h){ toast('Elige una fecha "desde" o "hasta"', 'err'); return; }
+    if(d && h && d > h){ toast('La fecha "desde" no puede ser mayor que "hasta"', 'err'); return; }
+    FILTRO.desde = d;
+    FILTRO.hasta = h;
+    pintar();
+    toast('Filtro aplicado', 'ok');
+  });
+  $('#fLimpiar').addEventListener('click', function(){
+    FILTRO.desde = '';
+    FILTRO.hasta = '';
+    $('#fDesde').value = '';
+    $('#fHasta').value = '';
+    pintar();
+    toast('Mostrando todo', 'ok');
+  });
+
   /* ---------------- carga ---------------- */
   function cargar(manual){
     var btn = $('#refreshBtn');
@@ -549,15 +642,94 @@ tbody tr:hover{background:#ffffff07}
     }).finally(function(){ btn.disabled = false; });
   }
 
+  /* ---------------- filtro por fechas ---------------- */
+  var FILTRO = { desde:'', hasta:'' };
+
+  function fechaEpoch(v, fin){
+    if(!v) return null;
+    var p = String(v).split('-');
+    if(p.length !== 3) return null;
+    var d = new Date(Number(p[0]), Number(p[1])-1, Number(p[2]), fin?23:0, fin?59:0, fin?59:0, fin?999:0);
+    var t = d.getTime();
+    return isNaN(t) ? null : t;
+  }
+  function filtroActivo(){ return !!(FILTRO.desde || FILTRO.hasta); }
+  function enRango(ts){
+    if(!filtroActivo()) return true;
+    if(!ts) return false;
+    var d = fechaEpoch(FILTRO.desde, false);
+    var h = fechaEpoch(FILTRO.hasta, true);
+    if(d !== null && ts < d) return false;
+    if(h !== null && ts > h) return false;
+    return true;
+  }
+  function filtrarLista(lista){
+    if(!filtroActivo()) return lista || [];
+    return (lista || []).filter(function(r){ return enRango(r.ts); });
+  }
+  function fechaCorta(v){
+    var p = String(v||'').split('-');
+    return p.length === 3 ? p[2]+'/'+p[1]+'/'+p[0] : v;
+  }
+  function esConfirmado(e){
+    var s = String(e||'').toLowerCase();
+    if(!s) return false;
+    if(/pendiente|por pagar|no pagad|no confirmad|cancelad|anulad|devol/.test(s)) return false;
+    return /pagad|confirm|entregad|completad|finalizad/.test(s);
+  }
+  function totalesFiltrados(){
+    var pedidos = filtrarLista(DATA.pedidos);
+    var gastos = filtrarLista(DATA.gastos);
+    var movs = filtrarLista(DATA.movimientos);
+    var t = {};
+    var ventas=0, ventasPend=0, cobrado=0, cobradoPend=0, unidades=0, confirmados=0, pendientes=0, envios=0, enviosPend=0;
+    pedidos.forEach(function(p){
+      unidades += p.cantidad || 0;
+      if(esConfirmado(p.estado)){
+        confirmados++; ventas += (p.producto||0)+(p.envio||0); envios += p.envio||0; cobrado += p.pagadoHoy||0;
+      }else{
+        pendientes++; ventasPend += (p.producto||0)+(p.envio||0); enviosPend += p.envio||0; cobradoPend += p.pagadoHoy||0;
+      }
+    });
+    var costoVendido = 0, invertido = 0;
+    movs.forEach(function(m){
+      if(m.tipo === 'PEDIDO') costoVendido += m.total || 0;
+      else if(m.tipo === 'COMPRA' || m.tipo === 'INICIAL') invertido += m.total || 0;
+    });
+    var totalGastos = 0;
+    gastos.forEach(function(g){ totalGastos += g.monto || 0; });
+    var ventasSinEnvio = ventas - envios;
+    var utilidadBruta = ventas - costoVendido;
+    t.ventas = ventas; t.ventasPendientes = ventasPend;
+    t.cobrado = cobrado; t.cobradoPendiente = cobradoPend;
+    t.unidades = unidades; t.confirmados = confirmados; t.pendientes = pendientes;
+    t.envios = envios; t.enviosPendientes = enviosPend; t.ventasSinEnvio = ventasSinEnvio;
+    t.costoVendido = costoVendido; t.invertido = invertido; t.totalGastos = totalGastos;
+    t.utilidadBruta = utilidadBruta; t.utilidadNeta = utilidadBruta - totalGastos;
+    t.utilidadSinEnvios = ventasSinEnvio - costoVendido;
+    t.utilidadReal = ventasSinEnvio - costoVendido - totalGastos;
+    t.valorInventario = (DATA.totales||{}).valorInventario || 0;
+    t.facturas = (DATA.facturas||[]).length;
+    return t;
+  }
+
   function pintar(){
-    var t = DATA.totales || {};
-    $('#updatedAt').textContent = 'Actualizado ' + new Date(DATA.generado).toLocaleString('es-CO');
+    var t = filtroActivo() ? totalesFiltrados() : (DATA.totales || {});
+    if(filtroActivo()){
+      var d = FILTRO.desde ? fechaCorta(FILTRO.desde) : 'el inicio';
+      var h = FILTRO.hasta ? fechaCorta(FILTRO.hasta) : 'hoy';
+      $('#updatedAt').textContent = 'Del ' + d + ' al ' + h;
+      $('#filtroNota').innerHTML = 'Mostrando <b>solo</b> las cuentas de esas fechas. El inventario de abajo siempre muestra el stock actual.';
+    }else{
+      $('#updatedAt').textContent = 'Actualizado ' + new Date(DATA.generado).toLocaleString('es-CO');
+      $('#filtroNota').innerHTML = 'Elige un rango de fechas para ver las cuentas de ese período.';
+    }
 
     var kpis = [
       { b:'Ventas confirmadas', v:money(t.ventas), s:(t.confirmados||0)+' pedidos'+(t.ventasManuales?' + '+money(t.ventasManuales)+' manuales':''), c:'good' },
       { b:'Por cobrar', v:money(t.ventasPendientes), s:(t.pendientes||0)+' pedidos sin confirmar', c:'warn' },
       { b:'Ganancia bruta', v:money(t.utilidadBruta), s:'Ventas − costo de la mercadería', c:(t.utilidadBruta>=0?'good':'bad') },
-      { b:'Ganancia neta', v:money(t.utilidadNeta), s:'Bruta − gastos del negocio', c:(t.utilidadNeta>=0?'good':'bad') },
+      { b:'Ganancia neta', v:money(t.utilidadNeta), s:'Incluye envíos · mira la Utilidad real abajo', c:(t.utilidadNeta>=0?'good':'bad') },
       { b:'Valor del inventario', v:money(t.valorInventario), s:'Dinero parado en bodega', c:'info' },
       { b:'Invertido en compras', v:money(t.invertido), s:'Total de mercadería comprada', c:'' },
       { b:'Gastos', v:money(t.totalGastos), s:'Empaque, pauta, transporte…', c:'bad' },
@@ -567,6 +739,7 @@ tbody tr:hover{background:#ffffff07}
       return '<div class="kpi '+k.c+'"><b>'+k.b+'</b><strong>'+k.v+'</strong><small>'+esc(k.s)+'</small></div>';
     }).join('');
 
+    pintarUtilidad(t);
     pintarInventario();
     pintarPedidos();
     pintarFacturas();
@@ -578,8 +751,30 @@ tbody tr:hover{background:#ffffff07}
 
   function colorHex(c){ return COLOR_HEX[c] || '#6b5a6e'; }
 
+  function pintarUtilidad(t){
+    t = t || DATA.totales || {};
+    var real = t.utilidadReal || 0;
+    var envios = t.envios || 0;
+    var ventasProducto = t.ventasSinEnvio || 0;
+    var pend = t.enviosPendientes || 0;
+    var el = $('#heroUtilidad');
+    el.textContent = money(real);
+    el.className = real < 0 ? 'neg' : '';
+    $('#heroEnvios').textContent = money(envios);
+    $('#heroVentasProducto').textContent = money(ventasProducto);
+    $('#heroEnviosNota').textContent = 'Los paga cada clienta, no salen de tu bolsillo'
+      + (pend ? ' · ' + money(pend) + ' en pedidos por confirmar' : '');
+    $('#heroBreak').innerHTML =
+      '<span>Ventas producto: <b>' + money(ventasProducto) + '</b></span>' +
+      '<span>− Costo mercadería: <b>' + money(t.costoVendido) + '</b></span>' +
+      '<span>− Gastos: <b>' + money(t.totalGastos) + '</b></span>' +
+      '<span>= Utilidad real: <b>' + money(real) + '</b></span>';
+  }
+
   function pintarInventario(){
     var todos = DATA.inventarioColor || [];
+    var est = $('#costoEstandarTxt');
+    if(est) est.textContent = money(DATA.costoEstandar || 35000);
     var colores = todos.filter(function(i){ return !productoActivo || i.producto === productoActivo; });
     var tallas = DATA.tallas || ['S','M','L','XL'];
     var totalSets = 0, totalValor = 0;
@@ -601,12 +796,19 @@ tbody tr:hover{background:#ffffff07}
         return '<span class="sz '+cls+'" title="'+esc(i.color)+' talla '+t+'"><b>'+t+'</b><span>'+st+'</span></span>';
       }).join('');
       var libre = i.sinDesglose ? '<div class="sz-sum">'+i.sinDesglose+' sin desglose de talla</div>' : '';
+      var especial = '';
+      if(i.especiales && i.especiales.unidades){
+        var costos = i.especiales.costos || {};
+        var partes = Object.keys(costos).map(function(c){ return costos[c]+' a '+money(Number(c)); });
+        especial = '<div class="sz-sum">'+i.especiales.unidades+' uds compradas aparte: '+partes.join(' · ')+'</div>';
+      }
       return '<div class="inv-card">'
         + '<div class="inv-top"><span class="swatch" style="background:'+colorHex(i.color)+'"></span>'
         + '<strong>'+esc(i.color)+'</strong><span style="margin-left:auto">'+badge+'</span></div>'
         + '<div class="inv-num"><b>'+i.stock+'</b><span>sets en bodega</span></div>'
         + '<div class="sz-row">'+chips+'</div>'
         + libre
+        + especial
         + '<div class="inv-meta"><span>Costo '+money(i.costoUnitario)+'</span><span>Valor '+money(i.valor)+'</span></div>'
         + '<div class="inv-meta" style="margin-top:3px"><span>Vendidos: '+i.salidas+'</span><span>'+(i.ultimaEntrada?'Última entrada: '+esc(i.ultimaEntrada):'Sin compras aún')+'</span></div>'
         + '</div>';
@@ -622,20 +824,93 @@ tbody tr:hover{background:#ffffff07}
     return '<span class="pill '+cls+'">'+esc(e||'Sin estado')+'</span>';
   }
 
+  var COLOR_ALIAS = {'negro':'Negro','negra':'Negro','negros':'Negro','negras':'Negro',
+    'blanco':'Blanco','blanca':'Blanco','blancos':'Blanco','blancas':'Blanco',
+    'rosa':'Rosa','rosado':'Rosa','rosada':'Rosa','gris':'Gris','grises':'Gris',
+    'cafe':'Café','cafes':'Café','marron':'Café','marrones':'Café',
+    'chocolate':'Chocolate','chocolates':'Chocolate'};
+
+  function canonColor(v){
+    var n = String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+    if(!n) return '';
+    var cols = (DATA && DATA.colores) || [];
+    for(var i=0;i<cols.length;i++){
+      var cn = String(cols[i]).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+      if(cn === n) return cols[i];
+    }
+    return COLOR_ALIAS[n] || '';
+  }
+  function itemsDeDetalle(detalle){
+    var txt = String(detalle||'');
+    var re = /Color:\s*([^|]+?)\s*\|\s*Talla:\s*([^|]+?)(?=\s*(?:Sudadera|\|\||$))/gi;
+    var out = [], m;
+    while((m = re.exec(txt))){
+      var c = canonColor(m[1]);
+      var t = String(m[2]||'').toUpperCase().trim();
+      if(!c || ['S','M','L','XL','XS'].indexOf(t) < 0) continue;
+      out.push({ color:c, talla:t });
+    }
+    return out;
+  }
+
+  function guardarSetsPedido(ref){
+    var colores = {}, tallas = {};
+    $$('#pedidosBody .it-color').forEach(function(s){
+      if(s.getAttribute('data-ref') === ref) colores[s.getAttribute('data-i')] = s.value;
+    });
+    $$('#pedidosBody .it-talla').forEach(function(s){
+      if(s.getAttribute('data-ref') === ref) tallas[s.getAttribute('data-i')] = s.value;
+    });
+    var idx = Object.keys(colores).sort(function(a,b){ return Number(a)-Number(b); });
+    var items = [], faltan = 0;
+    idx.forEach(function(i){
+      if(!colores[i] || !tallas[i]){ faltan++; return; }
+      items.push({ color: colores[i], size: tallas[i] });
+    });
+    if(faltan){
+      toast('Falta elegir color y talla en ' + faltan + ' set(s)', 'err');
+      return;
+    }
+    if(!items.length){ toast('El pedido no tiene sets', 'err'); return; }
+    api('update_order_items', { action:'update_order_items', referencia: ref, items: items })
+      .then(function(){ toast('Color y talla guardados', 'ok'); return cargar(); })
+      .catch(function(e){ toast(e.message, 'err'); });
+  }
+
   function pintarPedidos(){
-    var rows = DATA.pedidos || [];
-    if(!rows.length){ $('#pedidosBody').innerHTML = '<tr><td colspan="9" class="empty">Todavía no hay pedidos</td></tr>'; return; }
+    var rows = filtroActivo() ? filtrarLista(DATA.pedidos) : (DATA.pedidos || []);
+    if(!rows.length){ $('#pedidosBody').innerHTML = '<tr><td colspan="10" class="empty">Todavía no hay pedidos</td></tr>'; return; }
     var opts = DATA.estados || [];
+    var colores = DATA.colores || [];
+    var tallas = DATA.tallas || ['S','M','L','XL'];
     $('#pedidosBody').innerHTML = rows.map(function(p){
-      var sel = '<select class="st-select" data-ref="'+esc(p.referencia)+'" style="padding:7px 10px;border-radius:9px;background:#0d0c11;color:#fff;border:1px solid #4d3d4e">'
+      var sel = '<select class="st-select" data-ref="'+esc(p.referencia)+'">'
         + opts.map(function(o){ return '<option value="'+esc(o)+'"'+(o===p.estado?' selected':'')+'>'+esc(o)+'</option>'; }).join('')
         + '</select>';
+      var items = itemsDeDetalle(p.detalle);
+      var n = Math.max(Number(p.cantidad)||0, items.length);
+      var sets = '';
+      for(var i=0;i<n;i++){
+        var it = items[i] || { color:'', talla:'' };
+        sets += '<div class="set-row">'
+          + '<span class="set-n">'+(i+1)+'</span>'
+          + '<select class="it-color'+(it.color?'':' vacio')+'" data-ref="'+esc(p.referencia)+'" data-i="'+i+'">'
+          + '<option value="">— color —</option>'
+          + colores.map(function(c){ return '<option value="'+esc(c)+'"'+(c===it.color?' selected':'')+'>'+esc(c)+'</option>'; }).join('')
+          + '</select>'
+          + '<select class="it-talla'+(it.talla?'':' vacio')+'" data-ref="'+esc(p.referencia)+'" data-i="'+i+'">'
+          + '<option value="">—</option>'
+          + tallas.map(function(x){ return '<option value="'+esc(x)+'"'+(x===it.talla?' selected':'')+'>'+esc(x)+'</option>'; }).join('')
+          + '</select>'
+          + '</div>';
+      }
       return '<tr>'
         + '<td class="muted">'+esc(p.fecha)+'</td>'
         + '<td class="strong">'+esc(p.referencia)+'</td>'
         + '<td>'+esc(p.nombre)+(p.celular?'<br><span class="muted" style="font-size:.78rem">'+esc(p.celular)+'</span>':'')+'</td>'
         + '<td class="muted">'+esc(p.ciudad)+'</td>'
         + '<td class="num">'+p.cantidad+'</td>'
+        + '<td><div class="set-list">'+(sets || '<span class="muted">Sin sets</span>')+'</div></td>'
         + '<td class="num strong">'+money(p.producto+p.envio)+'</td>'
         + '<td class="num">'+money(p.pagadoHoy)+'</td>'
         + '<td>'+estadoPill(p.estado)+'<div style="margin-top:6px">'+sel+'</div></td>'
@@ -650,6 +925,10 @@ tbody tr:hover{background:#ffffff07}
           .catch(function(e){ toast(e.message, 'err'); });
       });
     });
+
+    $$('#pedidosBody .it-color, #pedidosBody .it-talla').forEach(function(sel){
+      sel.addEventListener('change', function(){ guardarSetsPedido(sel.getAttribute('data-ref')); });
+    });
   }
 
   function tipoPill(t){
@@ -658,7 +937,7 @@ tbody tr:hover{background:#ffffff07}
   }
 
   function pintarCompras(){
-    var rows = DATA.compras || [];
+    var rows = filtroActivo() ? filtrarLista(DATA.compras) : (DATA.compras || []);
     var total = 0;
     rows.forEach(function(r){ total += r.total; });
     $('#comprasTotal').textContent = money(total);
@@ -689,8 +968,13 @@ tbody tr:hover{background:#ffffff07}
   }
 
   function pintarGastos(){
-    var rows = DATA.gastos || [];
-    var cats = DATA.gastosPorCategoria || {};
+    var rows = filtroActivo() ? filtrarLista(DATA.gastos) : (DATA.gastos || []);
+    var cats = {};
+    if(filtroActivo()){
+      rows.forEach(function(r){ cats[r.categoria] = (cats[r.categoria]||0) + (r.monto||0); });
+    }else{
+      cats = DATA.gastosPorCategoria || {};
+    }
     var total = 0, maxCat = 1;
     Object.keys(cats).forEach(function(k){ total += cats[k]; if(cats[k] > maxCat) maxCat = cats[k]; });
     $('#gastosTotal').textContent = money(total);
@@ -724,7 +1008,7 @@ tbody tr:hover{background:#ffffff07}
   }
 
   function pintarFacturas(){
-    var rows = DATA.facturas || [];
+    var rows = filtroActivo() ? filtrarLista(DATA.facturas) : (DATA.facturas || []);
     var total = 0;
     rows.forEach(function(r){ total += r.total; });
     $('#facTotal').textContent = rows.length + (rows.length === 1 ? ' factura' : ' facturas') + ' · ' + money(total);
@@ -753,7 +1037,7 @@ tbody tr:hover{background:#ffffff07}
   }
 
   function pintarMovimientos(){
-    var rows = DATA.movimientos || [];
+    var rows = filtroActivo() ? filtrarLista(DATA.movimientos) : (DATA.movimientos || []);
     if(!rows.length){ $('#movBody').innerHTML = '<tr><td colspan="10" class="empty">Sin movimientos todavía</td></tr>'; return; }
     $('#movBody').innerHTML = rows.map(function(r){
       var signo = (r.tipo==='PEDIDO'||r.cantidad<0) ? '' : '+';
